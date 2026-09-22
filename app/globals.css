@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* LifeInbox brand palette */
+    --background: 220 23% 97%;        /* #F7F8FA */
+    --foreground: 222 32% 15%;       /* #172033 */
+    --card: 0 0% 100%;               /* #FFFFFF */
+    --card-foreground: 222 32% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 32% 15%;
+
+    --primary: 224 62% 22%;          /* #142357 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 222 32% 15%;
+
+    --muted: 220 14% 94%;
+    --muted-foreground: 215 16% 47%; /* #667085 */
+
+    --accent: 33 42% 54%;            /* #B8915B */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 65% 48%;        /* #C53A3A */
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 155 65% 25%;          /* #157A55 */
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 75% 40%;           /* #B7791F */
+    --warning-foreground: 0 0% 100%;
+
+    --border: 220 13% 90%;
+    --input: 220 13% 88%;
+    --ring: 224 62% 22%;
+
+    --chart-1: 224 62% 22%;
+    --chart-2: 33 42% 54%;
+    --chart-3: 155 65% 25%;
+    --chart-4: 38 75% 40%;
+    --chart-5: 0 65% 48%;
+
+    --radius: 0.875rem; /* ~14px */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Remove number input spinners */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}

@@ -5,6 +5,7 @@ import { Inter } from 'next/font/google';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://lifeinbox.app'),
   title: 'LifeInbox — Send it. Forget it. We\'ll remember.',
   description:
     'LifeInbox remembers your bills, appointments, subscriptions, travel, warranties and document expiry dates so you never miss what matters.',

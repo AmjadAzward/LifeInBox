@@ -70,6 +70,8 @@ export default function ConfirmPage() {
   const [error, setError] = useState('');
   const [workspaceId, setWorkspaceId] = useState('');
   const [workspaces, setWorkspaces] = useState<{ id: string; name: string }[]>([]);
+  const [feedbackSent,setFeedbackSent]=useState(false);
+  const sendFeedback=async(helpful:boolean)=>{const extraction=JSON.parse(sessionStorage.getItem('lifeinbox.extraction')||'{}');const pending=JSON.parse(sessionStorage.getItem('lifeinbox.pending')||'{}');const corrections=Object.fromEntries(fields.map(field=>[field.key,field.value]));const response=await fetch('/api/extract/feedback',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({attachmentId:pending.attachmentId||null,extraction,corrections,helpful})});if(response.ok)setFeedbackSent(true);};
 
   useEffect(() => {
     fetch('/api/family/workspaces').then((response) => response.json()).then((result) => setWorkspaces(result.data || [])).catch(() => undefined);
@@ -136,6 +138,7 @@ export default function ConfirmPage() {
 
       <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto space-y-6">
         {workspaces.length > 0 && <div className="space-y-2"><Label htmlFor="workspace">Sharing</Label><select id="workspace" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={workspaceId} onChange={(event) => setWorkspaceId(event.target.value)}><option value="">Private</option>{workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}</select></div>}
+        <div className="flex items-center gap-2 rounded-lg border bg-card p-3"><p className="mr-auto text-sm">Was the extracted information accurate?</p>{feedbackSent?<span className="text-sm text-success">Thank you.</span>:<><Button size="sm" variant="outline" onClick={()=>sendFeedback(true)}>Yes</Button><Button size="sm" variant="outline" onClick={()=>sendFeedback(false)}>No</Button></>}</div>
         {/* Header */}
         <div className="hidden lg:block">
           <div className="flex items-center gap-2 mb-1">

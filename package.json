@@ -58,7 +58,6 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.3.0",
-    "eslint": "8.49.0",
     "eslint-config-next": "^14.2.35",
     "input-otp": "^1.2.4",
     "jsdom": "^22.1.0",
@@ -83,5 +82,8 @@
     "vitest": "^0.34.6",
     "web-push": "^3.6.7",
     "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1"
   }
 }

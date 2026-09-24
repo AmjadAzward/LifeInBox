@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -26,7 +26,7 @@ import { MobileHeader } from '@/components/app/mobile-header';
 import { CategoryBadge } from '@/components/app/category-badge';
 import { StatusBadge } from '@/components/app/status-badge';
 import { Button } from '@/components/ui/button';
-import { mockLifeItems } from '@/lib/mock-data';
+import { useLifeItem } from '@/hooks/use-life-items';
 import { CATEGORY_ICONS } from '@/lib/category-icons';
 import {
   formatCurrency,
@@ -52,10 +52,14 @@ export default function LifeItemDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const item = mockLifeItems.find((i) => i.id === id);
+  const { item, loading, error, refresh } = useLifeItem(id);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [actionTaken, setActionTaken] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  if (loading) return <div><MobileHeader title="Loading" showBack backHref="/app/my-life" /><p className="p-8 text-sm text-muted-foreground">Loading item…</p></div>;
   if (!item) {
     return (
       <div>
@@ -77,9 +81,33 @@ export default function LifeItemDetailsPage() {
   const Icon = CATEGORY_ICONS[item.category];
   const primaryDate = getPrimaryDate(item);
 
-  const handleAction = (action: string) => {
-    setActionTaken(action);
-    setTimeout(() => setActionTaken(null), 3000);
+  const handleAction = async (action: string) => {
+    const apiAction = action === 'archived' ? 'archive' : action === 'reopened' ? 'restore' : 'complete';
+    const response = await fetch(`/api/life-items/${id}`, { method: 'PATCH', headers: {'content-type':'application/json'}, body: JSON.stringify({ action: apiAction }) });
+    if (!response.ok) return setActionTaken('error');
+    setActionTaken(action); await refresh(); setTimeout(() => setActionTaken(null), 3000);
+  };
+  const undoAction = async () => {
+    if(deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
+    const action = actionTaken === 'deleted' ? 'undelete' : 'restore';
+    const response = await fetch(`/api/life-items/${id}`, { method:'PATCH', headers:{'content-type':'application/json'}, body:JSON.stringify({action}) });
+    if(response.ok){setActionTaken(null);await refresh();}
+  };
+
+  const uploadAttachment = async (file?: File) => {
+    if (!file) return;
+    setUploading(true); setActionTaken(null);
+    const body = new FormData(); body.append('file', file); body.append('lifeItemId', id);
+    const response = await fetch('/api/uploads', { method: 'POST', body });
+    setUploading(false); if (fileInputRef.current) fileInputRef.current.value = '';
+    if (!response.ok) return setActionTaken('error');
+    await refresh();
+  };
+
+  const deleteAttachment = async (attachmentId: string) => {
+    const response = await fetch(`/api/uploads/${attachmentId}/download`, { method: 'DELETE' });
+    if (!response.ok) return setActionTaken('error');
+    await refresh();
   };
 
   const detailRows = [
@@ -161,7 +189,10 @@ export default function LifeItemDetailsPage() {
               {actionTaken === 'completed' && 'Marked as completed.'}
               {actionTaken === 'renewed' && 'Marked as renewed.'}
               {actionTaken === 'archived' && 'Item archived.'}
+              {actionTaken === 'deleted' && 'Item deleted.'}
+              {actionTaken === 'error' && 'The action could not be completed.'}
             </p>
+            {actionTaken!=='error'&&<Button size="sm" variant="outline" className="ml-auto" onClick={undoAction}>Undo</Button>}
           </div>
         )}
 
@@ -184,14 +215,16 @@ export default function LifeItemDetailsPage() {
             </Button>
           )}
           {item.status === 'COMPLETED' && (
-            <Button variant="outline" onClick={() => handleAction('completed')}>
+            <Button variant="outline" onClick={() => handleAction('reopened')}>
               <RotateCcw className="h-4 w-4 mr-2" />
               Reopen
             </Button>
           )}
-          <Button variant="outline" onClick={() => handleAction('archived')}>
+          <Button variant="outline" asChild>
+            <Link href={`/app/my-life/${id}/edit`}>
             <Pencil className="h-4 w-4 mr-2" />
             Edit Details
+            </Link>
           </Button>
         </div>
 
@@ -264,14 +297,18 @@ export default function LifeItemDetailsPage() {
         )}
 
         {/* Attachments */}
-        {item.attachments.length > 0 && (
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-              <Paperclip className="h-4 w-4 text-primary" />
-              <h2 className="text-sm font-semibold text-foreground">
-                Original Document
-              </h2>
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <input ref={fileInputRef} className="hidden" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => uploadAttachment(event.target.files?.[0])} />
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Paperclip className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-semibold text-foreground">Documents</h2>
+              </div>
+              <Button variant="outline" size="sm" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+                <Paperclip className="mr-2 h-4 w-4" />{uploading ? 'Uploading...' : 'Add document'}
+              </Button>
             </div>
+          {item.attachments.length > 0 ? (
             <div className="divide-y divide-border">
               {item.attachments.map((att) => (
                 <div
@@ -291,14 +328,15 @@ export default function LifeItemDetailsPage() {
                       </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    <Download className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" asChild><a href={`/api/uploads/${att.id}/download`} target="_blank" rel="noreferrer" aria-label={`Open ${att.fileName}`}><Download className="h-4 w-4" /></a></Button>
+                    <Button variant="ghost" size="sm" aria-label={`Delete ${att.fileName}`} onClick={() => deleteAttachment(att.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : <p className="p-4 text-sm text-muted-foreground">No documents attached.</p>}
+        </div>
 
         {/* Danger zone */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -334,7 +372,7 @@ export default function LifeItemDetailsPage() {
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={() => router.push('/app/my-life')}
+                    onClick={async () => { const response = await fetch(`/api/life-items/${id}`, { method: 'DELETE' }); if (response.ok) { setShowDeleteDialog(false); setActionTaken('deleted'); deleteTimerRef.current=setTimeout(() => router.push('/app/my-life'), 6000); } }}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
                     Delete

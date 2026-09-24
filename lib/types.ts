@@ -31,6 +31,7 @@ export type NotificationType = 'REMINDER' | 'SYSTEM' | 'INFO';
 
 export interface LifeItem {
   id: string;
+  workspaceId?: string | null;
   title: string;
   category: LifeItemCategory;
   description: string | null;
@@ -42,6 +43,9 @@ export interface LifeItem {
   dueDate: string | null;
   eventDate: string | null;
   expiryDate: string | null;
+  dueTime?: string | null;
+  eventTime?: string | null;
+  expiryTime?: string | null;
   referenceNumber: string | null;
   location: string | null;
   actionRequired: string | null;

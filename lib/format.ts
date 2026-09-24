@@ -12,13 +12,13 @@ export function formatDate(
   dateStr: string | null,
   fmt: string = 'd MMMM yyyy'
 ): string {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   try {
     const d = parseISO(dateStr);
-    if (!isValid(d)) return '—';
+    if (!isValid(d)) return '-';
     return format(d, fmt);
   } catch {
-    return '—';
+    return '-';
   }
 }
 
@@ -27,29 +27,29 @@ export function formatDateShort(dateStr: string | null): string {
 }
 
 export function formatDateTime(dateStr: string | null): string {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   try {
     const d = parseISO(dateStr);
-    if (!isValid(d)) return '—';
+    if (!isValid(d)) return '-';
     return format(d, 'd MMMM yyyy \'at\' h:mm a');
   } catch {
-    return '—';
+    return '-';
   }
 }
 
 export function formatTime(dateStr: string | null): string {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   try {
     const d = parseISO(dateStr);
-    if (!isValid(d)) return '—';
+    if (!isValid(d)) return '-';
     return format(d, 'h:mm a');
   } catch {
-    return '—';
+    return '-';
   }
 }
 
 export function formatCurrency(amount: number | null, currency: string): string {
-  if (amount === null) return '—';
+  if (amount === null) return '-';
   const formatted = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
@@ -75,10 +75,10 @@ export function daysUntil(dateStr: string | null): number | null {
 }
 
 export function getRelativeDateLabel(dateStr: string | null): string {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   try {
     const d = parseISO(dateStr);
-    if (!isValid(d)) return '—';
+    if (!isValid(d)) return '-';
     if (isToday(d)) return 'Today';
     const days = differenceInDays(d, new Date());
     if (days === 1) return 'Tomorrow';
@@ -87,7 +87,7 @@ export function getRelativeDateLabel(dateStr: string | null): string {
     if (days < 0 && days >= -7) return `${Math.abs(days)} days ago`;
     return format(d, 'd MMM yyyy');
   } catch {
-    return '—';
+    return '-';
   }
 }
 

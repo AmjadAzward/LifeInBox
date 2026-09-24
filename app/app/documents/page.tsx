@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { FileText, Image as ImageIcon, Download, Trash2, ChevronRight } from 'lucide-react';
 import { MobileHeader } from '@/components/app/mobile-header';
 import { EmptyState } from '@/components/app/empty-state';
-import { mockLifeItems } from '@/lib/mock-data';
+import { useLifeItems } from '@/hooks/use-life-items';
 import { formatDate, formatFileSize } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const filters = ['All', 'Bills', 'Travel', 'Warranties', 'Insurance', 'Identity', 'Other'];
 
 export default function DocumentsPage() {
+  const { items: mockLifeItems } = useLifeItems();
   const [filter, setFilter] = useState('All');
 
   const attachments = useMemo(() => {
@@ -22,7 +23,7 @@ export default function DocumentsPage() {
       }))
     );
     return all;
-  }, []);
+  }, [mockLifeItems]);
 
   return (
     <div>

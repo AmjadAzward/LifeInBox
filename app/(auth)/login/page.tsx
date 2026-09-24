@@ -7,6 +7,7 @@ import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { createClient, hasSupabaseConfig } from '@/lib/supabase/client';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function LoginPage() {
     {}
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: typeof errors = {};
     if (!email) newErrors.email = 'Email is required';
@@ -28,9 +29,24 @@ export default function LoginPage() {
     if (Object.keys(newErrors).length > 0) return;
 
     setLoading(true);
-    setTimeout(() => {
-      router.push('/app');
-    }, 800);
+    try {
+      const { error } = await createClient().auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    } catch (error) {
+      setErrors({ password: error instanceof Error ? error.message : 'Sign in failed.' });
+      setLoading(false);
+      return;
+    }
+    router.push('/app');
+    router.refresh();
+  };
+
+  const handleGoogle = async () => {
+    setLoading(true);
+    try {
+      const { error } = await createClient().auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback?next=/app` } });
+      if (error) throw error;
+    } catch (error) { setErrors({ password: error instanceof Error ? error.message : 'Google sign in failed.' }); setLoading(false); }
   };
 
   return (
@@ -39,6 +55,7 @@ export default function LoginPage() {
       <p className="text-sm text-muted-foreground mt-1.5">
         Sign in to your LifeInbox account
       </p>
+      {!hasSupabaseConfig && <p className="mt-4 rounded-lg bg-warning/10 p-3 text-sm text-warning">Authentication is not configured. Add the Supabase public URL and anonymous key to <code>.env.local</code>, then restart the server.</p>}
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         <div className="space-y-2">
@@ -96,7 +113,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" className="w-full" disabled={loading || !hasSupabaseConfig}>
           {loading ? 'Signing in...' : 'Sign in'}
         </Button>
       </form>
@@ -110,7 +127,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <Button variant="outline" className="w-full" onClick={() => router.push('/app')}>
+      <Button variant="outline" className="w-full" onClick={handleGoogle} disabled={loading || !hasSupabaseConfig}>
         <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24">
           <path
             fill="#4285F4"

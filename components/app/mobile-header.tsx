@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowLeft, Bell } from 'lucide-react';
-import { mockNotifications } from '@/lib/mock-data';
+import { useUnreadNotifications } from '@/hooks/use-unread-notifications';
 import { cn } from '@/lib/utils';
 
 interface MobileHeaderProps {
@@ -20,7 +20,7 @@ export function MobileHeader({
   backHref,
 }: MobileHeaderProps) {
   const pathname = usePathname();
-  const unreadCount = mockNotifications.filter((n) => !n.read).length;
+  const { unreadCount } = useUnreadNotifications();
 
   return (
     <header className="lg:hidden sticky top-0 z-20 flex items-center justify-between h-14 px-4 bg-card border-b border-border">

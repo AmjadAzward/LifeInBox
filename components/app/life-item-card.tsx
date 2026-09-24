@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Calendar, MapPin, Building2, Clock } from 'lucide-react';
+import { Calendar, MapPin, Clock, Users } from 'lucide-react';
 import type { LifeItem } from '@/lib/types';
 import { CategoryBadge } from './category-badge';
 import { StatusBadge } from './status-badge';
@@ -15,20 +15,25 @@ import { cn } from '@/lib/utils';
 interface LifeItemCardProps {
   item: LifeItem;
   href?: string;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: (selected: boolean) => void;
 }
 
-export function LifeItemCard({ item, href }: LifeItemCardProps) {
+export function LifeItemCard({ item, href, selectable, selected, onSelect }: LifeItemCardProps) {
   const linkHref = href || `/app/my-life/${item.id}`;
   const primaryDate = getPrimaryDate(item);
   const Icon = CATEGORY_ICONS[item.category];
 
   return (
+    <div className="relative">
+    {selectable && <input aria-label={`Select ${item.title}`} type="checkbox" checked={selected} onChange={(event)=>onSelect?.(event.target.checked)} className="absolute left-2 top-2 z-10 h-4 w-4" />}
     <Link
       href={linkHref}
       className="block bg-card rounded-xl border border-border p-4 hover:border-primary/20 hover:shadow-sm transition-all group"
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/5 text-primary group-hover:bg-primary/10 transition-colors">
+        <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/5 text-primary group-hover:bg-primary/10 transition-colors', selectable && 'ml-5')}>
           <Icon className="h-5 w-5" />
         </div>
 
@@ -49,6 +54,7 @@ export function LifeItemCard({ item, href }: LifeItemCardProps) {
 
           <div className="flex items-center gap-2 mt-2.5">
             <CategoryBadge category={item.category} />
+            {item.workspaceId && <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700"><Users className="h-3 w-3"/>Shared</span>}
           </div>
 
           <div className="flex items-center gap-4 mt-2.5 text-xs text-muted-foreground">
@@ -79,6 +85,6 @@ export function LifeItemCard({ item, href }: LifeItemCardProps) {
           )}
         </div>
       </div>
-    </Link>
+    </Link></div>
   );
 }

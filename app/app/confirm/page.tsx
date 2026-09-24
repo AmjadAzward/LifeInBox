@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   CheckCircle2,
@@ -66,16 +66,44 @@ export default function ConfirmPage() {
   const [currency, setCurrency] = useState('LKR');
   const [reminders, setReminders] = useState(suggestedReminders);
   const [confirmed, setConfirmed] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [workspaceId, setWorkspaceId] = useState('');
+  const [workspaces, setWorkspaces] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    fetch('/api/family/workspaces').then((response) => response.json()).then((result) => setWorkspaces(result.data || [])).catch(() => undefined);
+    const raw = sessionStorage.getItem('lifeinbox.extraction');
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      const pending=JSON.parse(sessionStorage.getItem('lifeinbox.pending')||'{}');
+      if(pending.preferredDate&&!data.due_date&&!data.event_date&&!data.expiry_date)data.event_date=pending.preferredDate;
+      const candidates: Omit<FieldConfig, 'value' | 'confidence'>[] = [
+        {key:'title',label:'Title',icon:FileText,type:'text'},{key:'organization',label:'Organization',icon:Building2,type:'text'},{key:'amount',label:'Amount',icon:CreditCard,type:'number'},
+        {key:'due_date',label:'Due Date',icon:Calendar,type:'date'},{key:'event_date',label:'Event Date',icon:Calendar,type:'date'},{key:'expiry_date',label:'Expiry Date',icon:Calendar,type:'date'},
+        {key:'reference_number',label:'Reference Number',icon:Hash,type:'text'},{key:'location',label:'Location',icon:MapPin,type:'text'},{key:'action_required',label:'Action Required',icon:CheckCircle2,type:'text'},
+      ];
+      const configs: FieldConfig[] = candidates.filter(({key}) => data[key] !== null && data[key] !== undefined).map((candidate) => ({ ...candidate, value: String(data[candidate.key]), confidence: data.field_confidence?.[candidate.key] ?? data.confidence ?? 1 }));
+      setFields(configs); setCategory(data.category || 'GENERAL_REMINDER'); setCurrency(data.currency || 'LKR');
+      setReminders((data.suggested_reminders || []).map((date: string, i: number) => ({ id: `r${i}`, label: new Date(date).toLocaleString(), description: date })));
+    } catch { setError('The extracted result could not be read.'); }
+  }, []);
 
   const updateField = (key: string, value: string) => {
     setFields((fs) => fs.map((f) => (f.key === key ? { ...f, value } : f)));
   };
 
-  const handleConfirm = () => {
-    setConfirmed(true);
-    setTimeout(() => {
-      router.push('/app/my-life/li-1');
-    }, 2000);
+  const handleConfirm = async () => {
+    setSaving(true); setError('');
+    try {
+      const values = Object.fromEntries(fields.map((f) => [f.key, f.value || null]));
+      const pending = JSON.parse(sessionStorage.getItem('lifeinbox.pending') || '{}');
+      const response = await fetch('/api/life-items', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...values, workspace_id: workspaceId || null, amount: values.amount ? Number(values.amount) : null, category, currency, ai_generated: true, ai_confidence: Math.min(...fields.map(f => f.confidence)), reminders: reminders.map(r => ({ remind_at: r.description, channel: 'BOTH' })), attachmentIds: pending.attachmentIds || (pending.attachmentId ? [pending.attachmentId] : []) }) });
+      const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Could not save item.');
+      sessionStorage.removeItem('lifeinbox.pending'); sessionStorage.removeItem('lifeinbox.extraction'); setConfirmed(true);
+      setTimeout(() => router.push(`/app/my-life/${result.data.id}`), 1200);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Could not save item.'); } finally { setSaving(false); }
   };
 
   if (confirmed) {
@@ -107,6 +135,7 @@ export default function ConfirmPage() {
       />
 
       <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto space-y-6">
+        {workspaces.length > 0 && <div className="space-y-2"><Label htmlFor="workspace">Sharing</Label><select id="workspace" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={workspaceId} onChange={(event) => setWorkspaceId(event.target.value)}><option value="">Private</option>{workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}</select></div>}
         {/* Header */}
         <div className="hidden lg:block">
           <div className="flex items-center gap-2 mb-1">
@@ -120,7 +149,7 @@ export default function ConfirmPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Review the details below. Fields with low confidence are highlighted
-            in amber — please verify them.
+            in amber - please verify them.
           </p>
         </div>
 
@@ -207,7 +236,7 @@ export default function ConfirmPage() {
                           )
                         : field.key === 'amount'
                         ? `${currency} ${Number(field.value).toLocaleString()}`
-                        : field.value || '—'}
+                        : field.value || '-'}
                     </p>
                   )}
 
@@ -291,6 +320,7 @@ export default function ConfirmPage() {
         </div>
 
         {/* Actions */}
+        {error && <p className="text-sm text-destructive mb-2">{error}</p>}
         <div className="flex gap-3 sticky bottom-20 lg:bottom-4 bg-background pt-2">
           <Button
             variant="outline"
@@ -309,10 +339,10 @@ export default function ConfirmPage() {
           <Button
             className="flex-1"
             onClick={handleConfirm}
-            disabled={editing}
+            disabled={editing || saving}
           >
             <CheckCircle2 className="h-4 w-4 mr-2" />
-            Confirm & Remember
+            {saving ? 'Saving…' : 'Confirm & Remember'}
           </Button>
         </div>
       </div>

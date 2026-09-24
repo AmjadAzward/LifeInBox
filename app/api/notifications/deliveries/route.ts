@@ -1,0 +1,5 @@
+import {NextRequest,NextResponse} from 'next/server';
+import {requireUser} from '@/lib/supabase/server';
+import {apiError} from '@/lib/http';
+export async function GET(){try{const{supabase,user}=await requireUser();const{data,error}=await supabase.from('notification_deliveries').select('*,reminders(life_item_id,life_items(title))').eq('owner_id',user.id).order('attempted_at',{ascending:false}).limit(100);if(error)throw error;return NextResponse.json({data});}catch(error){return apiError(error);}}
+export async function POST(request:NextRequest){try{const{supabase,user}=await requireUser();const{reminderId}=await request.json();const{data:reminder}=await supabase.from('reminders').select('id,life_items!inner(owner_id)').eq('id',reminderId).eq('life_items.owner_id',user.id).single();if(!reminder)throw new Error('NOT_FOUND');const{error}=await supabase.from('reminders').update({status:'PENDING',failed_at:null,last_error:null}).eq('id',reminderId);if(error)throw error;return NextResponse.json({ok:true});}catch(error){return apiError(error);}}

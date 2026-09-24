@@ -473,7 +473,7 @@ export const mockLifeItems: LifeItem[] = [
   },
   {
     id: 'li-10',
-    title: 'Water Bill — NWSDB',
+    title: 'Water Bill - NWSDB',
     category: 'BILL' as LifeItemCategory,
     description: 'Monthly water bill',
     organization: 'National Water Supply & Drainage Board',

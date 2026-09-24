@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Home,
   ListChecks,
@@ -15,7 +16,7 @@ import {
   Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { mockNotifications } from '@/lib/mock-data';
+import { useUnreadNotifications } from '@/hooks/use-unread-notifications';
 
 const navItems = [
   { href: '/app', label: 'Home', icon: Home },
@@ -29,7 +30,12 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const unreadCount = mockNotifications.filter((n) => !n.read).length;
+  const router = useRouter();
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const activePath = pendingHref || pathname;
+  const { unreadCount } = useUnreadNotifications();
+  useEffect(() => { setPendingHref(null); }, [pathname]);
+  useEffect(() => { [...navItems.map((item) => item.href), '/app/notifications', '/app/profile'].forEach((href) => router.prefetch(href)); }, [router]);
 
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col border-r border-border bg-card z-30">
@@ -49,13 +55,14 @@ export function Sidebar() {
         {navItems.map((item) => {
           const active =
             item.href === '/app'
-              ? pathname === '/app'
-              : pathname.startsWith(item.href);
+              ? activePath === '/app'
+              : activePath.startsWith(item.href);
           const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setPendingHref(item.href)}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                 active
@@ -73,9 +80,10 @@ export function Sidebar() {
       <div className="border-t border-border p-3 space-y-0.5">
         <Link
           href="/app/notifications"
+          onClick={() => setPendingHref('/app/notifications')}
           className={cn(
             'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-            pathname === '/app/notifications'
+            activePath === '/app/notifications'
               ? 'bg-primary text-primary-foreground'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
           )}
@@ -92,9 +100,10 @@ export function Sidebar() {
         </Link>
         <Link
           href="/app/profile"
+          onClick={() => setPendingHref('/app/profile')}
           className={cn(
             'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-            pathname === '/app/profile'
+            activePath === '/app/profile'
               ? 'bg-primary text-primary-foreground'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
           )}

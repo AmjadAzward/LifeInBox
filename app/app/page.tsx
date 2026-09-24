@@ -2,13 +2,16 @@
 
 import Link from 'next/link';
 import { Plus, AlertCircle, CalendarClock, Inbox } from 'lucide-react';
-import { mockLifeItems, mockUser } from '@/lib/mock-data';
+import { useLifeItems } from '@/hooks/use-life-items';
+import { useProfile } from '@/hooks/use-profile';
 import { LifeItemCard } from '@/components/app/life-item-card';
 import { SummaryCard } from '@/components/app/summary-card';
 import { MobileHeader } from '@/components/app/mobile-header';
 import { Button } from '@/components/ui/button';
 
 export default function DashboardPage() {
+  const { items: mockLifeItems, loading, error } = useLifeItems();
+  const { profile } = useProfile();
   const needsAttention = mockLifeItems.filter(
     (item) =>
       item.status === 'NEEDS_ATTENTION' ||
@@ -31,18 +34,21 @@ export default function DashboardPage() {
       <MobileHeader title="LifeInbox" showBack={false} />
 
       <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-8">
+        {error && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+        {loading && <p className="text-sm text-muted-foreground">Loading your LifeInbox…</p>}
         {/* Greeting */}
         <div className="animate-fade-in-up">
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-            {greeting}, {mockUser.fullName.split(' ')[0]}
+            {greeting}{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Here&apos;s what needs your attention.
           </p>
         </div>
 
+        <div className="space-y-4">
         {/* Primary CTA */}
-        <Link href="/app/remember">
+        <Link href="/app/remember" className="block">
           <div className="group flex items-center justify-between rounded-xl bg-primary p-5 hover:bg-primary/95 transition-colors cursor-pointer">
             <div className="flex items-center gap-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary-foreground/10">
@@ -53,7 +59,7 @@ export default function DashboardPage() {
                   Remember Something
                 </p>
                 <p className="text-sm text-primary-foreground/70">
-                  Upload a bill, booking, or document — we&apos;ll handle the rest
+                  Upload a bill, booking, or document - we&apos;ll handle the rest
                 </p>
               </div>
             </div>
@@ -78,6 +84,7 @@ export default function DashboardPage() {
             value={allItems.length}
             variant="default"
           />
+        </div>
         </div>
 
         {/* Needs Attention */}

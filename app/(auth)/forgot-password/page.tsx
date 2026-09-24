@@ -6,6 +6,7 @@ import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { createClient, hasSupabaseConfig } from '@/lib/supabase/client';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -13,7 +14,7 @@ export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
       setError('Email is required');
@@ -25,10 +26,12 @@ export default function ForgotPasswordPage() {
     }
     setError('');
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setSent(true);
-    }, 800);
+    let resetError: Error | null = null;
+    try { const result = await createClient().auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth/callback?next=/reset-password` }); resetError = result.error; }
+    catch (error) { resetError = error instanceof Error ? error : new Error('Password reset failed.'); }
+    setLoading(false);
+    if (resetError) { setError(resetError.message); return; }
+    setSent(true);
   };
 
   if (sent) {
@@ -84,7 +87,8 @@ export default function ForgotPasswordPage() {
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
 
-        <Button type="submit" className="w-full" disabled={loading}>
+        {!hasSupabaseConfig && <p className="text-sm text-warning">Password reset is unavailable until Supabase is configured.</p>}
+        <Button type="submit" className="w-full" disabled={loading || !hasSupabaseConfig}>
           {loading ? 'Sending...' : 'Send reset link'}
         </Button>
       </form>

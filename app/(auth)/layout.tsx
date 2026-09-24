@@ -26,7 +26,7 @@ export default function AuthLayout({
           </h1>
           <p className="text-primary-foreground/70 mt-4 leading-relaxed">
             LifeInbox remembers your bills, appointments, subscriptions, travel,
-            warranties and document expiry dates — so you never miss what
+            warranties and document expiry dates - so you never miss what
             matters.
           </p>
         </div>
@@ -34,11 +34,11 @@ export default function AuthLayout({
         <div className="space-y-2">
           <div className="flex items-center gap-3 text-primary-foreground/60 text-sm">
             <div className="h-1 w-1 rounded-full bg-accent" />
-            Upload a photo or screenshot — we extract the details
+            Upload a photo or screenshot - we extract the details
           </div>
           <div className="flex items-center gap-3 text-primary-foreground/60 text-sm">
             <div className="h-1 w-1 rounded-full bg-accent" />
-            Confirm what we found — we set the reminders
+            Confirm what we found - we set the reminders
           </div>
           <div className="flex items-center gap-3 text-primary-foreground/60 text-sm">
             <div className="h-1 w-1 rounded-full bg-accent" />

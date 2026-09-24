@@ -1,25 +1,32 @@
 'use client';
 
-import { Clock, Bell } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Clock, Bell, Save } from 'lucide-react';
 import { MobileHeader } from '@/components/app/mobile-header';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { CATEGORY_LABELS, type LifeItemCategory } from '@/lib/types';
 
-const defaults: {
+const presetDefaults: {
   category: LifeItemCategory;
   rules: string;
 }[] = [
-  { category: 'BILL', rules: '3 days before + due date' },
-  { category: 'APPOINTMENT', rules: '1 day before + 2 hours before' },
-  { category: 'TRAVEL', rules: '1 day before + 3 hours before' },
-  { category: 'SUBSCRIPTION', rules: '3 days before' },
-  { category: 'INSURANCE', rules: '30 days + 7 days + 1 day before' },
-  { category: 'DOCUMENT_EXPIRY', rules: '6 months + 3 months + 1 month before' },
-  { category: 'WARRANTY', rules: '30 days + 7 days before' },
-  { category: 'RETURN', rules: '3 days + 1 day before' },
-  { category: 'RESERVATION', rules: '1 day + 2 hours before' },
+  { category: 'BILL', rules: '4320, 0' },
+  { category: 'APPOINTMENT', rules: '1440, 120' },
+  { category: 'TRAVEL', rules: '1440, 180' },
+  { category: 'SUBSCRIPTION', rules: '4320' },
+  { category: 'INSURANCE', rules: '43200, 10080, 1440' },
+  { category: 'DOCUMENT_EXPIRY', rules: '262800, 131400, 43800' },
+  { category: 'WARRANTY', rules: '43200, 10080' },
+  { category: 'RETURN', rules: '4320, 1440' },
+  { category: 'RESERVATION', rules: '1440, 120' },
 ];
 
 export default function ReminderDefaultsPage() {
+  const [rules,setRules]=useState<Record<string,string>>(()=>Object.fromEntries(presetDefaults.map((entry)=>[entry.category,entry.rules])));
+  const [saved,setSaved]=useState(false);
+  useEffect(()=>{fetch('/api/preferences').then((r)=>r.json()).then(({data})=>{if(data?.reminder_defaults){const next={...rules};Object.entries(data.reminder_defaults).forEach(([category,minutes])=>{next[category]=(minutes as number[]).join(', ');});setRules(next);}});},[]);
+  const save=async()=>{const reminder_defaults=Object.fromEntries(Object.entries(rules).map(([category,value])=>[category,value.split(',').map(Number).filter((n)=>Number.isInteger(n)&&n>=0)]));const response=await fetch('/api/preferences',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({reminder_defaults})});setSaved(response.ok);};
   return (
     <div>
       <MobileHeader
@@ -45,7 +52,7 @@ export default function ReminderDefaultsPage() {
             </h2>
           </div>
           <div className="divide-y divide-border">
-            {defaults.map((d) => (
+            {presetDefaults.map((d) => (
               <div
                 key={d.category}
                 className="flex items-center justify-between px-4 py-3.5"
@@ -58,17 +65,13 @@ export default function ReminderDefaultsPage() {
                     {CATEGORY_LABELS[d.category]}
                   </p>
                 </div>
-                <p className="text-xs text-muted-foreground text-right">
-                  {d.rules}
-                </p>
+                <div className="w-52"><Input aria-label={`${CATEGORY_LABELS[d.category]} reminder minutes`} value={rules[d.category]||''} onChange={(event)=>setRules((current)=>({...current,[d.category]:event.target.value}))}/><p className="mt-1 text-[11px] text-muted-foreground">Minutes before, separated by commas</p></div>
               </div>
             ))}
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground text-center">
-          Custom per-category editing is coming soon.
-        </p>
+        <div className="flex items-center gap-3"><Button onClick={save}><Save className="mr-2 h-4 w-4"/>Save defaults</Button>{saved&&<span className="text-sm text-success">Saved.</span>}</div>
       </div>
     </div>
   );

@@ -1,28 +1,48 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Bell, CheckCheck, BellOff } from 'lucide-react';
+import { Bell, CheckCheck, BellOff, Trash2, History } from 'lucide-react';
 import { MobileHeader } from '@/components/app/mobile-header';
 import { EmptyState } from '@/components/app/empty-state';
 import { Button } from '@/components/ui/button';
-import { mockNotifications, mockLifeItems } from '@/lib/mock-data';
+import { useLifeItems } from '@/hooks/use-life-items';
+import type { Notification } from '@/lib/types';
+import { notifyNotificationChange } from '@/hooks/use-unread-notifications';
 import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/format';
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { items: mockLifeItems } = useLifeItems();
+  useEffect(()=>{fetch('/api/notifications').then(r=>r.json()).then(({data})=>setNotifications((data||[]).map((n:any)=>({id:n.id,lifeItemId:n.life_item_id,title:n.title,message:n.message,type:n.type,read:n.read,createdAt:n.created_at}))));},[]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
+    const previous = notifications;
     setNotifications((ns) => ns.map((n) => ({ ...n, read: true })));
+    const response = await fetch('/api/notifications',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({all:true})});
+    if (!response.ok) setNotifications(previous);
+    notifyNotificationChange();
   };
 
-  const markRead = (id: string) => {
+  const markRead = async (id: string) => {
+    const previous = notifications;
     setNotifications((ns) =>
       ns.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
+    const response = await fetch('/api/notifications',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({id})});
+    if (!response.ok) setNotifications(previous);
+    notifyNotificationChange();
+  };
+
+  const removeNotification = async (id: string) => {
+    const previous = notifications;
+    setNotifications((items) => items.filter((item) => item.id !== id));
+    const response = await fetch(`/api/notifications?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!response.ok) setNotifications(previous);
+    notifyNotificationChange();
   };
 
   return (
@@ -39,12 +59,12 @@ export default function NotificationsPage() {
                 : 'You\'re all caught up.'}
             </p>
           </div>
-          {unreadCount > 0 && (
+          <div className="flex gap-2"><Button variant="outline" asChild><Link href="/app/notifications/history"><History className="mr-2 h-4 w-4"/>Delivery history</Link></Button>{unreadCount > 0 && (
             <Button variant="outline" onClick={markAllRead}>
               <CheckCheck className="h-4 w-4 mr-2" />
               Mark all read
             </Button>
-          )}
+          )}</div>
         </div>
 
         {/* Mobile mark all read */}
@@ -98,9 +118,12 @@ export default function NotificationsPage() {
                       >
                         {n.title}
                       </p>
+                      <div className="flex items-center gap-2">
                       {!n.read && (
                         <span className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1.5" />
                       )}
+                      <button aria-label={`Delete ${n.title}`} className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={(event) => { event.stopPropagation(); removeNotification(n.id); }}><Trash2 className="h-4 w-4" /></button>
+                      </div>
                     </div>
                     <p className="text-sm text-muted-foreground mt-0.5">
                       {n.message}

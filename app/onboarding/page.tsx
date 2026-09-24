@@ -11,7 +11,7 @@ const steps = [
     icon: Inbox,
     title: 'Welcome to LifeInbox',
     description:
-      'The place to send everything you need to remember — bills, bookings, appointments, warranties and more. We\'ll keep track so you don\'t have to.',
+      'The place to send everything you need to remember - bills, bookings, appointments, warranties and more. We\'ll keep track so you don\'t have to.',
   },
   {
     icon: Upload,
@@ -29,7 +29,7 @@ const steps = [
     icon: Bell,
     title: 'We\'ll remind you',
     description:
-      'Get reminded at the right time through push notifications or email. Mark items as paid or completed when done. That\'s it — simple, calm, reliable.',
+      'Get reminded at the right time through push notifications or email. Mark items as paid or completed when done. That\'s it - simple, calm, reliable.',
   },
 ];
 

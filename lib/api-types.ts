@@ -1,0 +1,6 @@
+import type { Attachment, LifeItem, Reminder } from './types';
+export function toLifeItem(row: any): LifeItem {
+  return { id:row.id,workspaceId:row.workspace_id,title:row.title,category:row.category,description:row.description,organization:row.organization,personName:row.person_name,amount:row.amount===null?null:Number(row.amount),currency:row.currency,issueDate:row.issue_date,dueDate:row.due_date,eventDate:row.event_date,expiryDate:row.expiry_date,dueTime:row.due_time,eventTime:row.event_time,expiryTime:row.expiry_time,referenceNumber:row.reference_number,location:row.location,actionRequired:row.action_required,status:row.status,recurring:row.recurring,recurrenceRule:row.recurrence_rule,aiGenerated:row.ai_generated,aiConfidence:row.ai_confidence,confirmed:row.confirmed,createdAt:row.created_at,updatedAt:row.updated_at,completedAt:row.completed_at,archivedAt:row.archived_at,
+    attachments:(row.attachments||[]).map((a:any):Attachment=>({id:a.id,lifeItemId:a.life_item_id,fileName:a.file_name,fileType:a.file_type,mimeType:a.mime_type,fileSize:a.file_size,createdAt:a.created_at})),
+    reminders:(row.reminders||[]).map((r:any):Reminder=>({id:r.id,lifeItemId:r.life_item_id,remindAt:r.remind_at,channel:r.channel,status:r.status,sentAt:r.sent_at,failedAt:r.failed_at})) };
+}

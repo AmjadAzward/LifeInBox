@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import {
   ImagePlus,
   FileText,
@@ -15,6 +16,7 @@ import { MobileHeader } from '@/components/app/mobile-header';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { compressImage } from '@/lib/image-compression';
 
 type InputMethod = 'image' | 'pdf' | 'photo' | 'paste' | 'type';
 
@@ -67,40 +69,43 @@ const methods: MethodOption[] = [
 
 export default function RememberPage() {
   const router = useRouter();
+  const searchParams=useSearchParams();
   const [selectedMethod, setSelectedMethod] = useState<InputMethod | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [text, setText] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (f: File | undefined) => {
-    if (!f) return;
+  const handleFileSelect = async (selected: FileList | File[] | undefined) => {
+    const incoming = Array.from(selected || []);
+    if (!incoming.length) return;
     const validTypes = [
       'image/jpeg',
       'image/png',
       'image/webp',
       'application/pdf',
     ];
-    if (!validTypes.includes(f.type)) {
+    if (incoming.some((file) => !validTypes.includes(file.type))) {
       setError('Please upload a JPG, PNG, WEBP, or PDF file.');
       return;
     }
-    if (f.size > 10 * 1024 * 1024) {
+    if (incoming.some((file) => file.size > 10 * 1024 * 1024)) {
       setError('File is too large. Maximum size is 10 MB.');
       return;
     }
     setError('');
-    setFile(f);
+    const compressed = await Promise.all(incoming.map(compressImage));
+    setFiles((current) => [...current, ...compressed].slice(0, 5));
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    handleFileSelect(e.dataTransfer.files[0]);
+    handleFileSelect(e.dataTransfer.files);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedMethod) return;
     if (
       (selectedMethod === 'paste' || selectedMethod === 'type') &&
@@ -113,18 +118,23 @@ export default function RememberPage() {
       (selectedMethod === 'image' ||
         selectedMethod === 'pdf' ||
         selectedMethod === 'photo') &&
-      !file
+      !files.length
     ) {
       setError('Please select a file first.');
       return;
     }
     setError('');
-    router.push('/app/processing');
+    try {
+      const attachmentIds: string[] = [];
+      for (const file of files) { const body = new FormData(); body.append('file', file); const response = await fetch('/api/uploads', { method:'POST', body }); const result = await response.json(); if(!response.ok) throw new Error(result.error||'Upload failed'); attachmentIds.push(result.data.id); }
+      sessionStorage.setItem('lifeinbox.pending', JSON.stringify({ text: text.trim() || undefined, attachmentId:attachmentIds[0], attachmentIds, preferredDate:searchParams.get('date')||undefined }));
+      router.push('/app/processing');
+    } catch (e) { setError(e instanceof Error ? e.message : 'Unable to continue.'); }
   };
 
   const resetMethod = () => {
     setSelectedMethod(null);
-    setFile(null);
+    setFiles([]);
     setText('');
     setError('');
   };
@@ -139,7 +149,7 @@ export default function RememberPage() {
             Remember Something
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Upload a document or type the details — we&apos;ll extract the
+            Upload a document or type the details - we&apos;ll extract the
             important information for you.
           </p>
         </div>
@@ -197,6 +207,7 @@ export default function RememberPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
+                  multiple={selectedMethod !== 'photo'}
                   accept={
                     methods.find((m) => m.id === selectedMethod)?.accept
                   }
@@ -204,7 +215,7 @@ export default function RememberPage() {
                     selectedMethod === 'photo' ? 'environment' : undefined
                   }
                   className="hidden"
-                  onChange={(e) => handleFileSelect(e.target.files?.[0])}
+                  onChange={(e) => handleFileSelect(e.target.files || undefined)}
                 />
                 <div
                   onDragOver={(e) => {
@@ -221,27 +232,27 @@ export default function RememberPage() {
                       : 'border-border hover:border-primary/30'
                   )}
                 >
-                  {file ? (
+                  {files.length ? (
                     <div className="space-y-3">
                       <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-success/10 mx-auto">
                         <FileText className="h-6 w-6 text-success" />
                       </div>
                       <div>
                         <p className="font-medium text-sm text-foreground">
-                          {file.name}
+                          {files.map((file) => file.name).join(', ')}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {(file.size / 1024).toFixed(0)} KB · {file.type}
+                          {files.length} file{files.length === 1 ? '' : 's'} · {(files.reduce((total, file) => total + file.size, 0) / 1024).toFixed(0)} KB total
                         </p>
                       </div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setFile(null);
+                          setFiles([]);
                         }}
                         className="text-xs text-destructive hover:underline"
                       >
-                        Remove file
+                        Remove files
                       </button>
                     </div>
                   ) : (

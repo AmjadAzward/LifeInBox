@@ -7,7 +7,7 @@ import { MobileHeader } from '@/components/app/mobile-header';
 const faqs = [
   {
     q: 'How do I add something to LifeInbox?',
-    a: 'Tap the Remember Something button and choose how you want to add it — upload an image or PDF, take a photo, paste text, or type the details. We\'ll extract the important information and ask you to confirm before saving.',
+    a: 'Tap the Remember Something button and choose how you want to add it - upload an image or PDF, take a photo, paste text, or type the details. We\'ll extract the important information and ask you to confirm before saving.',
   },
   {
     q: 'How do reminders work?',

@@ -6,11 +6,12 @@ import { MobileHeader } from '@/components/app/mobile-header';
 import { LifeItemCard } from '@/components/app/life-item-card';
 import { EmptyState } from '@/components/app/empty-state';
 import { Input } from '@/components/ui/input';
-import { mockLifeItems } from '@/lib/mock-data';
+import { useLifeItems } from '@/hooks/use-life-items';
 import { cn } from '@/lib/utils';
 import { CATEGORY_LABELS, STATUS_LABELS, type LifeItemCategory, type LifeItemStatus } from '@/lib/types';
 
 export default function SearchPage() {
+  const { items: mockLifeItems } = useLifeItems();
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<LifeItemCategory | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<LifeItemStatus | 'ALL'>('ALL');
@@ -33,7 +34,7 @@ export default function SearchPage() {
       if (statusFilter !== 'ALL' && item.status !== statusFilter) return false;
       return true;
     });
-  }, [query, categoryFilter, statusFilter]);
+  }, [mockLifeItems, query, categoryFilter, statusFilter]);
 
   return (
     <div>

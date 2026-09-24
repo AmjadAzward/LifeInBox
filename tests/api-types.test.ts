@@ -1,0 +1,3 @@
+import { describe,expect,it } from 'vitest';
+import { toLifeItem } from '@/lib/api-types';
+describe('toLifeItem',()=>{it('maps database fields to UI fields',()=>{const item=toLifeItem({id:'1',title:'Bill',category:'BILL',description:null,organization:null,person_name:null,amount:'12.50',currency:'LKR',issue_date:null,due_date:'2026-09-30',event_date:null,expiry_date:null,reference_number:'A',location:null,action_required:'Pay',status:'UPCOMING',recurring:false,recurrence_rule:null,ai_generated:true,ai_confidence:.9,confirmed:true,created_at:'x',updated_at:'x',completed_at:null,archived_at:null,attachments:[],reminders:[]});expect(item.amount).toBe(12.5);expect(item.dueDate).toBe('2026-09-30');expect(item.actionRequired).toBe('Pay');});});

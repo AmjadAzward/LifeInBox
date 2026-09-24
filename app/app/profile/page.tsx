@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { User as UserIcon, Mail, Globe, Calendar, Save, Camera } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { User as UserIcon, Mail, Globe, Calendar, Save, Camera, Trash2 } from 'lucide-react';
 import { MobileHeader } from '@/components/app/mobile-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,19 +13,54 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockUser } from '@/lib/mock-data';
 import { getInitials } from '@/lib/format';
+import { useProfile } from '@/hooks/use-profile';
 
 export default function ProfilePage() {
-  const [fullName, setFullName] = useState(mockUser.fullName);
-  const [email, setEmail] = useState(mockUser.email);
-  const [country, setCountry] = useState(mockUser.country);
-  const [timezone, setTimezone] = useState(mockUser.timezone);
+  const { profile, loading, error: profileError, refresh } = useProfile();
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [country, setCountry] = useState('');
+  const [timezone, setTimezone] = useState('UTC');
   const [saved, setSaved] = useState(false);
+  const [message, setMessage] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSave = () => {
-    setSaved(true);
+  useEffect(() => { if(profile){setFullName(profile.full_name);setEmail(profile.email);setCountry(profile.country);setTimezone(profile.timezone);setAvatarUrl(profile.image_url ? `/api/profile/avatar?v=${Date.now()}` : '');} }, [profile]);
+
+  const handleAvatar = async (file?: File) => {
+    if (!file) return;
+    setUploadingAvatar(true); setMessage('');
+    try {
+      const body = new FormData(); body.append('avatar', file);
+      const response = await fetch('/api/profile/avatar', { method: 'POST', body });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Unable to upload photo.');
+      setAvatarUrl(result.imageUrl);
+      await refresh();
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Unable to upload photo.'); }
+    finally { setUploadingAvatar(false); if (avatarInputRef.current) avatarInputRef.current.value = ''; }
+  };
+
+  const handleSave = async () => {
+    if (profile && email.trim().toLowerCase() !== profile.email.toLowerCase()) {
+      const { createClient } = await import('@/lib/supabase/client');
+      const { error } = await createClient().auth.updateUser({ email: email.trim() });
+      if (error) { setMessage(error.message); return; }
+      setMessage('Profile saved. Check your new email address to confirm the change.');
+    }
+    const response = await fetch('/api/me',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({full_name:fullName,country,timezone})});
+    if(!response.ok){setMessage('Unable to save profile.');return;}
+    setMessage(''); setSaved(true); await refresh();
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  const removeAvatar = async () => {
+    const response = await fetch('/api/profile/avatar', { method: 'DELETE' });
+    if (!response.ok) return setMessage('Unable to remove photo.');
+    setAvatarUrl(''); await refresh();
   };
 
   return (
@@ -39,23 +74,26 @@ export default function ProfilePage() {
             Update your personal information.
           </p>
         </div>
+        {(message || profileError) && <p className="text-sm text-destructive">{message || profileError}</p>}
 
         {/* Avatar */}
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground text-xl font-bold">
-              {getInitials(fullName)}
+            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-primary text-primary-foreground text-xl font-bold">
+              {avatarUrl ? <div role="img" aria-label={`${fullName} profile photo`} className="h-full w-full bg-cover bg-center" style={{ backgroundImage: `url(${avatarUrl})` }} /> : getInitials(fullName)}
             </div>
-            <button className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-card border border-border text-muted-foreground hover:text-foreground">
+            <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => handleAvatar(event.target.files?.[0])} />
+            <button type="button" aria-label="Upload profile photo" disabled={uploadingAvatar} onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-card border border-border text-muted-foreground hover:text-foreground disabled:opacity-50">
               <Camera className="h-3.5 w-3.5" />
             </button>
           </div>
           <div>
-            <p className="text-sm font-medium text-foreground">{fullName}</p>
+            <p className="text-sm font-medium text-foreground">{loading && !fullName ? 'Loading...' : fullName}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Click the camera icon to upload a photo
+              {uploadingAvatar ? 'Uploading photo...' : 'Click the camera icon to upload or replace your photo'}
             </p>
           </div>
+          {avatarUrl && <Button type="button" variant="ghost" size="sm" onClick={removeAvatar}><Trash2 className="mr-2 h-4 w-4"/>Remove</Button>}
         </div>
 
         {/* Form */}

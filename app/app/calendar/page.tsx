@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Calendar as CalendarIcon,
   List,
+  Download,
 } from 'lucide-react';
 import {
   format,
@@ -25,15 +26,16 @@ import {
 import { MobileHeader } from '@/components/app/mobile-header';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { mockLifeItems } from '@/lib/mock-data';
+import { useLifeItems } from '@/hooks/use-life-items';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/lib/category-icons';
 import { CATEGORY_LABELS, type LifeItemCategory } from '@/lib/types';
 import { getPrimaryDate } from '@/lib/format';
 
-type ViewMode = 'month' | 'agenda';
+type ViewMode = 'month' | 'week' | 'day' | 'agenda';
 
 export default function CalendarPage() {
-  const [currentDate, setCurrentDate] = useState(new Date('2026-09-22'));
+  const { items: mockLifeItems } = useLifeItems();
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<ViewMode>('month');
 
   const events = useMemo(() => {
@@ -71,7 +73,7 @@ export default function CalendarPage() {
     });
 
     return result.sort((a, b) => a.date.getTime() - b.date.getTime());
-  }, []);
+  }, [mockLifeItems]);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -85,6 +87,8 @@ export default function CalendarPage() {
   const agendaEvents = events.filter(
     (e) => e.date >= monthStart && e.date <= monthEnd
   );
+  const weekStart=startOfWeek(currentDate,{weekStartsOn:1}),weekEnd=endOfWeek(currentDate,{weekStartsOn:1});
+  const visibleAgenda=view==='day'?events.filter((event)=>isSameDay(event.date,currentDate)):view==='week'?events.filter((event)=>event.date>=weekStart&&event.date<=weekEnd):agendaEvents;
 
   return (
     <div>
@@ -99,6 +103,7 @@ export default function CalendarPage() {
             </p>
           </div>
           <div className="flex gap-1 p-1 rounded-lg bg-muted">
+            <Button variant="outline" size="sm" asChild><a href="/api/calendar/ics"><Download className="mr-1 h-4 w-4"/>Export</a></Button>
             <button
               onClick={() => setView('month')}
               className={cn(
@@ -111,6 +116,8 @@ export default function CalendarPage() {
               <CalendarIcon className="h-4 w-4" />
               Month
             </button>
+            <button onClick={()=>setView('week')} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium',view==='week'?'bg-card text-foreground shadow-sm':'text-muted-foreground')}>Week</button>
+            <button onClick={()=>setView('day')} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium',view==='day'?'bg-card text-foreground shadow-sm':'text-muted-foreground')}>Day</button>
             <button
               onClick={() => setView('agenda')}
               className={cn(
@@ -140,6 +147,8 @@ export default function CalendarPage() {
             <CalendarIcon className="h-4 w-4" />
             Month
           </button>
+          <button onClick={()=>setView('week')} className={cn('flex-1 rounded-md px-2 py-1.5 text-sm',view==='week'?'bg-card shadow-sm':'text-muted-foreground')}>Week</button>
+          <button onClick={()=>setView('day')} className={cn('flex-1 rounded-md px-2 py-1.5 text-sm',view==='day'?'bg-card shadow-sm':'text-muted-foreground')}>Day</button>
           <button
             onClick={() => setView('agenda')}
             className={cn(
@@ -170,7 +179,7 @@ export default function CalendarPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentDate(new Date('2026-09-22'))}
+              onClick={() => setCurrentDate(new Date())}
               className="px-3"
             >
               Today
@@ -192,7 +201,7 @@ export default function CalendarPage() {
             getEventsForDay={getEventsForDay}
           />
         ) : (
-          <AgendaView events={agendaEvents} />
+          <AgendaView events={visibleAgenda} />
         )}
       </div>
     </div>
@@ -246,7 +255,9 @@ function MonthView({
                 idx >= 7 && idx < 14 ? '' : ''
               )}
             >
-              <div
+              <Link
+                href={`/app/remember?date=${format(day,'yyyy-MM-dd')}`}
+                aria-label={`Add item on ${format(day,'MMMM d, yyyy')}`}
                 className={cn(
                   'flex h-6 w-6 items-center justify-center rounded-full text-xs',
                   today
@@ -257,7 +268,7 @@ function MonthView({
                 )}
               >
                 {format(day, 'd')}
-              </div>
+              </Link>
 
               <div className="mt-1 space-y-0.5">
                 {dayEvents.slice(0, 3).map((e, i) => {

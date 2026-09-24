@@ -7,6 +7,7 @@ import { Mail, Lock, Eye, EyeOff, User as UserIcon, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { createClient, hasSupabaseConfig } from '@/lib/supabase/client';
 import {
   Select,
   SelectContent,
@@ -50,7 +51,7 @@ export default function RegisterPage() {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
     if (!form.fullName) newErrors.fullName = 'Full name is required';
@@ -67,9 +68,11 @@ export default function RegisterPage() {
     if (Object.keys(newErrors).length > 0) return;
 
     setLoading(true);
-    setTimeout(() => {
-      router.push('/onboarding');
-    }, 800);
+    try {
+      const { error } = await createClient().auth.signUp({ email: form.email, password: form.password, options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`, data: { full_name: form.fullName, country: form.country, timezone: form.timezone } } });
+      if (error) throw error;
+    } catch (error) { setErrors({ email: error instanceof Error ? error.message : 'Registration failed.' }); setLoading(false); return; }
+    router.push('/onboarding');
   };
 
   return (
@@ -78,6 +81,7 @@ export default function RegisterPage() {
       <p className="text-sm text-muted-foreground mt-1.5">
         Start remembering what matters
       </p>
+      {!hasSupabaseConfig && <p className="mt-4 rounded-lg bg-warning/10 p-3 text-sm text-warning">Registration is unavailable until Supabase is configured in <code>.env.local</code>.</p>}
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         <div className="space-y-2">
@@ -86,7 +90,7 @@ export default function RegisterPage() {
             <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               id="fullName"
-              placeholder="Sarah Perera"
+              placeholder="Your full name"
               className="pl-10"
               value={form.fullName}
               onChange={(e) => setForm({ ...form, fullName: e.target.value })}
@@ -202,7 +206,7 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" className="w-full" disabled={loading || !hasSupabaseConfig}>
           {loading ? 'Creating account...' : 'Create account'}
         </Button>
       </form>

@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { MobileHeader } from '@/components/app/mobile-header';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { createClient } from '@/lib/supabase/client';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +27,10 @@ import {
 
 export default function PrivacyPage() {
   const [exportRequested, setExportRequested] = useState(false);
+  const [password,setPassword]=useState('');
+  const [error,setError]=useState('');
+  const exportData = () => { setExportRequested(true); window.location.href='/api/data-export'; };
+  const remove = async (account=false) => { if(account){const supabase=createClient();const{data:{user}}=await supabase.auth.getUser();if(!user?.email||!password)return setError('Enter your password to confirm.');const{error:authError}=await supabase.auth.signInWithPassword({email:user.email,password});if(authError)return setError('Password is incorrect.');}const response=await fetch(account?'/api/account':'/api/account/content',{method:'DELETE'});if(!response.ok)return setError('The deletion could not be completed.');window.location.href=account?'/login':'/app'; };
 
   return (
     <div>
@@ -55,7 +61,7 @@ export default function PrivacyPage() {
               <Button
                 variant="outline"
                 className="mt-3"
-                onClick={() => setExportRequested(true)}
+                onClick={exportData}
               >
                 {exportRequested ? 'Export requested' : 'Request export'}
               </Button>
@@ -106,7 +112,7 @@ export default function PrivacyPage() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  <AlertDialogAction onClick={() => remove(false)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                     Delete everything
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -138,10 +144,11 @@ export default function PrivacyPage() {
                     reminders, documents, and notification history. This action
                     cannot be undone.
                   </AlertDialogDescription>
+                  <Input type="password" autoComplete="current-password" placeholder="Enter your password" value={password} onChange={(event)=>setPassword(event.target.value)}/>{error&&<p className="text-sm text-destructive">{error}</p>}
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  <AlertDialogAction onClick={() => remove(true)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                     Delete account
                   </AlertDialogAction>
                 </AlertDialogFooter>

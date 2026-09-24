@@ -1,0 +1,4 @@
+import { NextRequest,NextResponse } from 'next/server';
+import { requireUser,createAdminSupabase } from '@/lib/supabase/server';
+import { apiError } from '@/lib/http';
+export async function POST(_:NextRequest,{params}:{params:{token:string}}){try{const{user}=await requireUser();const db=createAdminSupabase();const{data:invite}=await db.from('workspace_invites').select('*').eq('token',params.token).is('accepted_at',null).gt('expires_at',new Date().toISOString()).single();if(!invite||invite.email.toLowerCase()!==user.email?.toLowerCase())throw new Error('NOT_FOUND');await db.from('workspace_members').upsert({workspace_id:invite.workspace_id,user_id:user.id,role:invite.role});await db.from('workspace_invites').update({accepted_at:new Date().toISOString()}).eq('id',invite.id);return NextResponse.json({workspaceId:invite.workspace_id});}catch(e){return apiError(e);}}

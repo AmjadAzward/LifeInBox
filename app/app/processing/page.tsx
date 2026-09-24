@@ -33,6 +33,7 @@ export default function ProcessingPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const stepInterval = setInterval(() => {
@@ -55,14 +56,23 @@ export default function ProcessingPage() {
       });
     }, 60);
 
-    const redirectTimer = setTimeout(() => {
-      router.push('/app/confirm');
-    }, 6500);
+    let cancelled = false;
+    const extract = async () => {
+      try {
+        const pending = sessionStorage.getItem('lifeinbox.pending');
+        if (!pending) throw new Error('Nothing was submitted for extraction.');
+        const response = await fetch('/api/extract', { method: 'POST', headers: { 'content-type': 'application/json' }, body: pending });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Extraction failed');
+        if (!cancelled) { sessionStorage.setItem('lifeinbox.extraction', JSON.stringify(result.data)); setProgress(100); setCurrentStep(steps.length - 1); router.push('/app/confirm'); }
+      } catch (e) { if (!cancelled) setError(e instanceof Error ? e.message : 'Extraction failed.'); }
+    };
+    extract();
 
     return () => {
       clearInterval(stepInterval);
       clearInterval(progressInterval);
-      clearTimeout(redirectTimer);
+      cancelled = true;
     };
   }, [router]);
 
@@ -71,6 +81,7 @@ export default function ProcessingPage() {
       <MobileHeader title="Processing" showBack={false} showBell={false} />
 
       <div className="p-4 sm:p-6 lg:p-8 max-w-lg mx-auto">
+        {error && <div className="rounded-lg bg-destructive/10 text-destructive p-3 text-sm mb-4">{error}</div>}
         <div className="flex flex-col items-center justify-center py-12">
           {/* Progress circle */}
           <div className="relative h-24 w-24 mb-8">

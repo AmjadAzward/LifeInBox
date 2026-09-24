@@ -2,7 +2,6 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSearchParams } from 'next/navigation';
 import {
   ImagePlus,
   FileText,
@@ -69,7 +68,6 @@ const methods: MethodOption[] = [
 
 export default function RememberPage() {
   const router = useRouter();
-  const searchParams=useSearchParams();
   const [selectedMethod, setSelectedMethod] = useState<InputMethod | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [text, setText] = useState('');
@@ -127,7 +125,8 @@ export default function RememberPage() {
     try {
       const attachmentIds: string[] = [];
       for (const file of files) { const body = new FormData(); body.append('file', file); const response = await fetch('/api/uploads', { method:'POST', body }); const result = await response.json(); if(!response.ok) throw new Error(result.error||'Upload failed'); attachmentIds.push(result.data.id); }
-      sessionStorage.setItem('lifeinbox.pending', JSON.stringify({ text: text.trim() || undefined, attachmentId:attachmentIds[0], attachmentIds, preferredDate:searchParams.get('date')||undefined }));
+      const preferredDate=new URLSearchParams(window.location.search).get('date')||undefined;
+      sessionStorage.setItem('lifeinbox.pending', JSON.stringify({ text: text.trim() || undefined, attachmentId:attachmentIds[0], attachmentIds, preferredDate }));
       router.push('/app/processing');
     } catch (e) { setError(e instanceof Error ? e.message : 'Unable to continue.'); }
   };

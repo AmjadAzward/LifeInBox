@@ -1,0 +1,7 @@
+import { NextResponse } from 'next/server';
+import { requireUser, createAdminSupabase } from '@/lib/supabase/server';
+import { GOOGLE_CALENDAR_PROVIDER } from '@/lib/google-calendar';
+import { apiError } from '@/lib/http';
+
+export async function GET() { try { const { user } = await requireUser(); const db=createAdminSupabase(); const {data,error}=await db.from('integration_connections').select('calendar_id,expires_at,updated_at').eq('owner_id',user.id).eq('provider',GOOGLE_CALENDAR_PROVIDER).maybeSingle(); if(error)throw error; return NextResponse.json({connected:!!data,connection:data||null}); } catch(error){return apiError(error);} }
+export async function DELETE() { try { const {user}=await requireUser(); const db=createAdminSupabase(); const {data}=await db.from('integration_connections').select('encrypted_access_token').eq('owner_id',user.id).eq('provider',GOOGLE_CALENDAR_PROVIDER).maybeSingle(); if(data?.encrypted_access_token){ try { const {decryptSecret}=await import('@/lib/integration-crypto'); await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(decryptSecret(data.encrypted_access_token))}`,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'}}); } catch {} } const{error}=await db.from('integration_connections').delete().eq('owner_id',user.id).eq('provider',GOOGLE_CALENDAR_PROVIDER); if(error)throw error; return NextResponse.json({ok:true}); }catch(error){return apiError(error);} }

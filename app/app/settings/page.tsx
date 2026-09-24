@@ -8,7 +8,6 @@ import {
   Shield,
   HelpCircle,
   ChevronRight,
-  Mail,
   Globe,
   Calendar,
   Moon,
@@ -31,6 +30,7 @@ export default function SettingsPage() {
     {title:'Account',items:[
       {href:'/app/profile',icon:UserIcon,label:'Profile',value:profile?.full_name || 'Loading…'},
       {href:'/app/settings/security',icon:KeyRound,label:'Password & Security',value:'Password and active sessions'},
+      {href:'/app/settings/integrations',icon:Calendar,label:'Connected Apps',value:'Google Calendar and more'},
       {href:'/app/family',icon:Users,label:'Family',value:'Workspaces, invitations, and members'},
       {href:'/app/settings/notifications',icon:Bell,label:'Notification Preferences',value:preferences?.push_enabled ? 'Push & Email enabled' : 'Email only'},
       {href:'/app/settings/reminder-defaults',icon:Clock,label:'Reminder Defaults',value:'Per-category rules'}]},
@@ -115,40 +115,6 @@ export default function SettingsPage() {
             </div>
           </div>
         ))}
-
-        {/* Connected Apps */}
-        <div className="mb-6">
-          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">
-            Connected Apps
-          </h2>
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
-            {[
-              { name: 'Gmail', status: 'Coming later' },
-              { name: 'Outlook', status: 'Coming later' },
-              { name: 'Google Calendar', status: 'Coming later' },
-              { name: 'Apple Calendar', status: 'Coming later' },
-            ].map((app, idx) => (
-              <div
-                key={app.name}
-                className={`flex items-center justify-between px-4 py-3.5 ${
-                  idx > 0 ? 'border-t border-border' : ''
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                    <Mail className="h-4.5 w-4.5" />
-                  </div>
-                  <p className="text-sm font-medium text-foreground">
-                    {app.name}
-                  </p>
-                </div>
-                <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                  {app.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
 
         {/* Sign out */}
         <button

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/supabase/server';
 import { apiError } from '@/lib/http';
+import { scanUpload } from '@/lib/malware-scan';
 
 const allowedTypes = new Map([
   ['image/jpeg', 'jpg'],
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
     const extension = allowedTypes.get(file.type);
     if (!extension) return NextResponse.json({ error: 'Use a JPG, PNG, or WEBP image.' }, { status: 400 });
     if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: 'Photo must be 5 MB or smaller.' }, { status: 400 });
+    await scanUpload(new Uint8Array(await file.arrayBuffer()));
 
     const { data: previous } = await supabase.from('profiles').select('image_url').eq('id', user.id).single();
     const path = `${user.id}/avatars/profile-${crypto.randomUUID()}.${extension}`;

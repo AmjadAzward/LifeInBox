@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/supabase/server';
 import { apiError } from '@/lib/http';
 import { rateLimit } from '@/lib/rate-limit';
+import { scanUpload } from '@/lib/malware-scan';
 
 const allowed = new Set(['image/jpeg','image/png','image/webp','application/pdf']);
 export async function POST(request: NextRequest) {
@@ -12,7 +13,9 @@ export async function POST(request: NextRequest) {
     const file = form.get('file');
     const lifeItemId = form.get('lifeItemId');
     if (!(file instanceof File) || !allowed.has(file.type) || file.size > 10 * 1024 * 1024) return NextResponse.json({ error: 'Invalid file. Use JPG, PNG, WEBP or PDF up to 10 MB.' }, { status: 400 });
-    const bytes = new Uint8Array(await file.slice(0, Math.min(file.size, 1024 * 1024)).arrayBuffer());
+    const fileBytes = new Uint8Array(await file.arrayBuffer());
+    await scanUpload(fileBytes);
+    const bytes = fileBytes.slice(0, Math.min(fileBytes.length, 1024 * 1024));
     if (file.type === 'application/pdf') {
       const signature = new TextDecoder('latin1').decode(bytes);
       if (!signature.startsWith('%PDF-')) return NextResponse.json({ error:'This file is not a valid PDF.' }, { status:400 });

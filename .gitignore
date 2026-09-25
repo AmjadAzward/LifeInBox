@@ -40,3 +40,4 @@ next-env.d.ts
 
 # temporary backup output
 /.backups/
+/.restore-tests/

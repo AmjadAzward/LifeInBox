@@ -25,10 +25,6 @@ function Assert-Command([string]$Name) {
   if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) { throw "Required command '$Name' was not found." }
 }
 
-function Encode-StoragePath([string]$Path) {
-  return (($Path -split '/') | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/'
-}
-
 if (-not (Test-Path -LiteralPath $envFile)) { throw '.env.local was not found.' }
 $settings = Read-DotEnv $envFile
 $supabaseUrl = $settings['NEXT_PUBLIC_SUPABASE_URL'].TrimEnd('/')
@@ -37,6 +33,7 @@ $databaseUrl = $settings['SUPABASE_DB_URL']
 if (-not $supabaseUrl -or -not $serviceKey -or -not $databaseUrl) { throw 'Supabase URL, service-role key, or SUPABASE_DB_URL is missing from .env.local.' }
 
 Assert-Command 'rclone'
+Assert-Command 'node.exe'
 $pgDumpCommand = Get-Command 'pg_dump.exe' -ErrorAction SilentlyContinue
 if (-not $pgDumpCommand) {
   $defaultPgDump = 'C:\Program Files\PostgreSQL\17\bin\pg_dump.exe'
@@ -50,29 +47,16 @@ $dumpPath = Join-Path $runDirectory 'database.dump'
 & $pgDumpCommand.FullName --dbname=$databaseUrl --file=$dumpPath --format=custom --compress=9 --no-owner --no-privileges
 if ($LASTEXITCODE -ne 0) { throw 'Database dump failed.' }
 
-$headers = @{ Authorization = "Bearer $serviceKey"; apikey = $serviceKey }
-function Backup-StoragePrefix([string]$Prefix) {
-  $offset = 0
-  do {
-    $body = @{ prefix = $Prefix; limit = 100; offset = $offset; sortBy = @{ column = 'name'; order = 'asc' } } | ConvertTo-Json -Depth 4
-    $entries = @(Invoke-RestMethod -Method Post -Uri "$supabaseUrl/storage/v1/object/list/documents" -Headers $headers -ContentType 'application/json' -Body $body)
-    foreach ($entry in $entries) {
-      $objectPath = if ($Prefix) { "$Prefix/$($entry.name)" } else { $entry.name }
-      $isFolder = [string]::IsNullOrWhiteSpace([string]$entry.id) -or $null -eq $entry.metadata
-      if ($isFolder) { Backup-StoragePrefix $objectPath; continue }
-      $relativePath = $objectPath.Replace('/', [IO.Path]::DirectorySeparatorChar)
-      $destination = [IO.Path]::GetFullPath((Join-Path $storageDirectory $relativePath))
-      $safeRoot = [IO.Path]::GetFullPath($storageDirectory) + [IO.Path]::DirectorySeparatorChar
-      if (-not $destination.StartsWith($safeRoot, [StringComparison]::OrdinalIgnoreCase)) { throw "Unsafe storage path rejected: $objectPath" }
-      New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
-      Invoke-WebRequest -Uri "$supabaseUrl/storage/v1/object/authenticated/documents/$(Encode-StoragePath $objectPath)" -Headers $headers -OutFile $destination
-    }
-    $offset += $entries.Count
-  } while ($entries.Count -eq 100)
-}
-
 Write-Host 'Downloading private Storage objects...'
-Backup-StoragePrefix ''
+$env:SUPABASE_BACKUP_URL = $supabaseUrl
+$env:SUPABASE_BACKUP_SERVICE_KEY = $serviceKey
+try {
+  & node.exe (Join-Path $PSScriptRoot 'backup-storage.mjs') $storageDirectory
+  if ($LASTEXITCODE -ne 0) { throw 'Private Storage backup failed.' }
+} finally {
+  Remove-Item Env:SUPABASE_BACKUP_URL -ErrorAction SilentlyContinue
+  Remove-Item Env:SUPABASE_BACKUP_SERVICE_KEY -ErrorAction SilentlyContinue
+}
 $manifestPath = Join-Path $runDirectory 'manifest.sha256'
 Get-ChildItem -LiteralPath $runDirectory -File -Recurse | Where-Object FullName -ne $manifestPath | ForEach-Object {
   $relative = $_.FullName.Substring($runDirectory.Length).TrimStart([char[]]'\/').Replace('\', '/')

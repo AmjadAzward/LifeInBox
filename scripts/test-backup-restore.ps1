@@ -42,7 +42,7 @@ if ($verified -eq 0) { throw 'The backup manifest contained no verifiable files.
 
 & $pgRestore.FullName --list $dumpPath | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'The PostgreSQL archive is not readable by pg_restore.' }
-Write-Host "Restore test passed for $latest: $verified file(s) verified and database archive readable."
+Write-Host "Restore test passed for ${latest}: $verified file(s) verified and database archive readable."
 
 if (-not $KeepFiles) {
   Remove-Item -LiteralPath $restoreDirectory -Recurse -Force

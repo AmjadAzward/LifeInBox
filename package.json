@@ -10,6 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:live": "cross-env RUN_LIVE_TESTS=1 vitest run tests/live-supabase.integration.test.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:update": "playwright test --update-snapshots",
     "seed:sample": "node scripts/seed-sample.cjs",
     "verify:sample": "node scripts/verify-sample.cjs"
   },
@@ -85,6 +88,8 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
     "eslint": "^8.57.1",
     "supabase": "^2.117.0"
   }

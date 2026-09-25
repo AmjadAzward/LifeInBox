@@ -33,22 +33,22 @@ if (-not (Test-Path -LiteralPath $envFile)) { throw '.env.local was not found.' 
 $settings = Read-DotEnv $envFile
 $supabaseUrl = $settings['NEXT_PUBLIC_SUPABASE_URL'].TrimEnd('/')
 $serviceKey = $settings['SUPABASE_SERVICE_ROLE_KEY']
-if (-not $supabaseUrl -or -not $serviceKey) { throw 'Supabase URL or service-role key is missing from .env.local.' }
+$databaseUrl = $settings['SUPABASE_DB_URL']
+if (-not $supabaseUrl -or -not $serviceKey -or -not $databaseUrl) { throw 'Supabase URL, service-role key, or SUPABASE_DB_URL is missing from .env.local.' }
 
-Assert-Command 'npx.cmd'
 Assert-Command 'rclone'
+$pgDumpCommand = Get-Command 'pg_dump.exe' -ErrorAction SilentlyContinue
+if (-not $pgDumpCommand) {
+  $defaultPgDump = 'C:\Program Files\PostgreSQL\17\bin\pg_dump.exe'
+  if (Test-Path -LiteralPath $defaultPgDump) { $pgDumpCommand = Get-Item -LiteralPath $defaultPgDump }
+  else { throw "Required command 'pg_dump.exe' was not found." }
+}
 New-Item -ItemType Directory -Path $storageDirectory -Force | Out-Null
 
 Write-Host "Creating database backup $stamp..."
-Push-Location $projectRoot
-try {
-  & npx.cmd supabase db dump --linked --file (Join-Path $runDirectory 'roles.sql') --role-only
-  if ($LASTEXITCODE -ne 0) { throw 'Role dump failed.' }
-  & npx.cmd supabase db dump --linked --file (Join-Path $runDirectory 'schema.sql')
-  if ($LASTEXITCODE -ne 0) { throw 'Schema dump failed.' }
-  & npx.cmd supabase db dump --linked --file (Join-Path $runDirectory 'data.sql') --data-only --use-copy
-  if ($LASTEXITCODE -ne 0) { throw 'Data dump failed.' }
-} finally { Pop-Location }
+$dumpPath = Join-Path $runDirectory 'database.dump'
+& $pgDumpCommand.FullName --dbname=$databaseUrl --file=$dumpPath --format=custom --compress=9 --no-owner --no-privileges
+if ($LASTEXITCODE -ne 0) { throw 'Database dump failed.' }
 
 $headers = @{ Authorization = "Bearer $serviceKey"; apikey = $serviceKey }
 function Backup-StoragePrefix([string]$Prefix) {

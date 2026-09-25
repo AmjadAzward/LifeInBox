@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
     const primaryKey = item.due_date ? 'due_date' : item.event_date ? 'event_date' : item.expiry_date ? 'expiry_date' : null;
     if (!primaryKey || !item[primaryKey]) continue;
     const nextDate = nextRecurrenceDate(item[primaryKey], item.recurrence_rule);
+    if (!nextDate) continue;
     const { id, created_at, updated_at, completed_at, archived_at, search_vector, ...copy } = item;
     const { data: duplicate } = await db.from('life_items').select('id').eq('owner_id', item.owner_id).eq('title', item.title).eq(primaryKey, nextDate).maybeSingle();
     if (!duplicate) await db.from('life_items').insert({ ...copy, [primaryKey]: nextDate, status: 'UPCOMING', completed_at: null, archived_at: null });

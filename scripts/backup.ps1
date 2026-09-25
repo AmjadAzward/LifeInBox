@@ -66,7 +66,7 @@ Get-ChildItem -LiteralPath $runDirectory -File -Recurse | Where-Object FullName 
 
 $destinationRemote = "$Remote/$stamp"
 Write-Host "Uploading encrypted backup to $destinationRemote..."
-& rclone copy $runDirectory $destinationRemote --checksum --create-empty-src-dirs
+& rclone copy $runDirectory $destinationRemote --size-only --create-empty-src-dirs
 if ($LASTEXITCODE -ne 0) { throw 'Encrypted upload failed; the local backup has been retained.' }
 & rclone check $runDirectory $destinationRemote --one-way --size-only
 if ($LASTEXITCODE -ne 0) { throw 'Backup verification failed; the local backup has been retained.' }

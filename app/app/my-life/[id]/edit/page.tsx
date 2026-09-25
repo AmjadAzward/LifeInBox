@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { categories } from '@/lib/validation';
 import { CATEGORY_LABELS, type ReminderChannel } from '@/lib/types';
+import { parseRecurrence, recurrenceRule, type RecurrenceFrequency } from '@/lib/recurrence';
 
 type ReminderDraft = { remind_at: string; channel: ReminderChannel };
 type FormState = Record<string, string | boolean>;
@@ -79,6 +80,7 @@ export default function EditLifeItemPage() {
     ['due_time','Due time','time'], ['event_date','Event date','date'], ['event_time','Event time','time'], ['expiry_date','Expiry date','date'], ['expiry_time','Expiry time','time'],
     ['reference_number','Reference number','text'], ['location','Location','text'], ['action_required','Action required','text'],
   ];
+  const recurrence = parseRecurrence(String(form.recurrence_rule || 'FREQ=MONTHLY;INTERVAL=1'));
 
   return <div>
     <MobileHeader title="Edit item" showBack backHref={`/app/my-life/${id}`} />
@@ -92,7 +94,7 @@ export default function EditLifeItemPage() {
         {fields.map(([name,label,type]) => <div className="space-y-2" key={name}><Label htmlFor={name}>{label}</Label><Input id={name} type={type} min={type === 'number' ? '0' : undefined} step={type === 'number' ? '0.01' : undefined} value={String(form[name])} onChange={(e) => update(name, e.target.value)} /></div>)}
         <div className="space-y-2 sm:col-span-2"><Label htmlFor="description">Description</Label><Textarea id="description" value={String(form.description)} onChange={(e) => update('description', e.target.value)} /></div>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(form.recurring)} onChange={(e) => update('recurring', e.target.checked)} /> Recurring item</label>
-        {form.recurring && <div className="space-y-2"><Label htmlFor="recurrence_rule">Recurrence rule</Label><Input id="recurrence_rule" placeholder="MONTHLY" value={String(form.recurrence_rule)} onChange={(e) => update('recurrence_rule', e.target.value)} /></div>}
+        {form.recurring && <div className="grid gap-3 sm:col-span-2 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="recurrence_frequency">Repeat</Label><select id="recurrence_frequency" className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={recurrence.frequency} onChange={(e)=>update('recurrence_rule',recurrenceRule(e.target.value as RecurrenceFrequency,recurrence.interval))}><option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option><option value="YEARLY">Yearly</option></select></div><div className="space-y-2"><Label htmlFor="recurrence_interval">Every</Label><div className="flex items-center gap-2"><Input id="recurrence_interval" type="number" min="1" max="99" value={recurrence.interval} onChange={(e)=>update('recurrence_rule',recurrenceRule(recurrence.frequency,Number(e.target.value)||1))}/><span className="text-sm text-muted-foreground">{recurrence.frequency.toLowerCase().replace('daily','day(s)').replace('weekly','week(s)').replace('monthly','month(s)').replace('yearly','year(s)')}</span></div></div></div>}
       </section>
       <section className="rounded-xl border bg-card">
         <div className="flex items-center justify-between border-b p-4"><div className="flex items-center gap-2"><Bell className="h-4 w-4"/><h2 className="font-semibold">Reminders</h2></div><Button type="button" variant="outline" size="sm" onClick={() => setReminders((list) => [...list, { remind_at: '', channel: 'BOTH' }])}><Plus className="mr-1 h-4 w-4"/>Add reminder</Button></div>

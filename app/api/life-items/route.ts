@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireUser, createAdminSupabase } from '@/lib/supabase/server';
 import { lifeItemInput } from '@/lib/validation';
 import { apiError } from '@/lib/http';
+import { zonedDateTimeToUtc } from '@/lib/date-time';
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,11 +30,11 @@ export async function POST(request: NextRequest) {
     const input = lifeItemInput.parse(raw);
     let { reminders, ...item } = input;
     if (!reminders.length) {
-      const { data: preference } = await supabase.from('user_preferences').select('reminder_defaults,default_notification_time').eq('user_id', user.id).single();
+      const { data: preference } = await supabase.from('user_preferences').select('reminder_defaults,default_notification_time,timezone').eq('user_id', user.id).single();
       const offsets = preference?.reminder_defaults?.[item.category] as number[] | undefined;
       const date = item.due_date || item.event_date || item.expiry_date;
       if (date && offsets?.length) {
-        const base = new Date(`${date}T${preference?.default_notification_time || '08:00'}:00Z`);
+        const base = zonedDateTimeToUtc(date, preference?.default_notification_time || '08:00', preference?.timezone || 'UTC');
         reminders = offsets.map((minutes) => ({ remind_at: new Date(base.getTime() - minutes * 60_000).toISOString(), channel: 'BOTH' as const }));
       }
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createClient, hasSupabaseConfig } from '@/lib/supabase/client';
+import { TurnstileWidget } from '@/components/auth/turnstile-widget';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,6 +16,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
+  const captchaEnabled = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
+  const handleCaptcha = useCallback((token: string) => setCaptchaToken(token), []);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
     {}
   );
@@ -30,7 +34,7 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const { error } = await createClient().auth.signInWithPassword({ email, password });
+      const { error } = await createClient().auth.signInWithPassword({ email, password, options: { captchaToken } });
       if (error) throw error;
     } catch (error) {
       setErrors({ password: error instanceof Error ? error.message : 'Sign in failed.' });
@@ -113,7 +117,8 @@ export default function LoginPage() {
           )}
         </div>
 
-        <Button type="submit" className="w-full" disabled={loading || !hasSupabaseConfig}>
+        <TurnstileWidget onToken={handleCaptcha}/>
+        <Button type="submit" className="w-full" disabled={loading || !hasSupabaseConfig || (captchaEnabled && !captchaToken)}>
           {loading ? 'Signing in...' : 'Sign in'}
         </Button>
       </form>

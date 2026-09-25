@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     await scanUpload(fileBytes);
     const bytes = fileBytes.slice(0, Math.min(fileBytes.length, 1024 * 1024));
     if (file.type === 'application/pdf') {
-      const signature = new TextDecoder('latin1').decode(bytes);
+      const signature = new TextDecoder('latin1').decode(fileBytes);
       if (!signature.startsWith('%PDF-')) return NextResponse.json({ error:'This file is not a valid PDF.' }, { status:400 });
       if (signature.includes('/Encrypt')) return NextResponse.json({ error:'Password-protected PDFs are not supported.' }, { status:400 });
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, User as UserIcon, Globe } from 'lucide-react';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createClient, hasSupabaseConfig } from '@/lib/supabase/client';
+import { TurnstileWidget } from '@/components/auth/turnstile-widget';
 import {
   Select,
   SelectContent,
@@ -41,6 +42,9 @@ export default function RegisterPage() {
     timezone: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [captchaToken, setCaptchaToken] = useState('');
+  const captchaEnabled = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
+  const handleCaptcha = useCallback((token: string) => setCaptchaToken(token), []);
 
   useEffect(() => {
     try {
@@ -69,7 +73,7 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const { error } = await createClient().auth.signUp({ email: form.email, password: form.password, options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`, data: { full_name: form.fullName, country: form.country, timezone: form.timezone } } });
+      const { error } = await createClient().auth.signUp({ email: form.email, password: form.password, options: { captchaToken, emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`, data: { full_name: form.fullName, country: form.country, timezone: form.timezone } } });
       if (error) throw error;
     } catch (error) { setErrors({ email: error instanceof Error ? error.message : 'Registration failed.' }); setLoading(false); return; }
     router.push('/onboarding');
@@ -206,7 +210,8 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        <Button type="submit" className="w-full" disabled={loading || !hasSupabaseConfig}>
+        <TurnstileWidget onToken={handleCaptcha}/>
+        <Button type="submit" className="w-full" disabled={loading || !hasSupabaseConfig || (captchaEnabled && !captchaToken)}>
           {loading ? 'Creating account...' : 'Create account'}
         </Button>
       </form>

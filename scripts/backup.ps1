@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$Remote = 'lifeinbox-backup:backups', [switch]$KeepLocal)
+param([string]$Remote = 'lifeinbox-backup:backups', [int]$RetentionDays = 30, [switch]$KeepLocal)
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
@@ -76,6 +76,10 @@ if ($LASTEXITCODE -ne 0) { throw 'Encrypted upload failed; the local backup has 
 & $rcloneCommand.FullName check $runDirectory $destinationRemote --one-way --size-only
 if ($LASTEXITCODE -ne 0) { throw 'Backup verification failed; the local backup has been retained.' }
 Write-Host "Backup uploaded and verified: $destinationRemote"
+if ($RetentionDays -gt 0) {
+  & $rcloneCommand.FullName delete $Remote --min-age "${RetentionDays}d" --rmdirs
+  if ($LASTEXITCODE -ne 0) { Write-Warning 'Backup succeeded, but remote retention cleanup failed.' }
+}
 if (-not $KeepLocal) {
   Remove-Item -LiteralPath $runDirectory -Recurse -Force
   Write-Host 'Removed the temporary local backup after successful verification.'

@@ -2,17 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import webpush from 'web-push';
 import { createAdminSupabase } from '@/lib/supabase/server';
+import { nextRecurrenceDate } from '@/lib/recurrence';
 
 function dateOnly(value: Date) { return value.toISOString().slice(0, 10); }
-function addRecurrence(value: string, rule: string) {
-  const date = new Date(`${value}T12:00:00Z`);
-  const normalized = rule.toUpperCase();
-  if (normalized.includes('DAILY')) date.setUTCDate(date.getUTCDate() + 1);
-  else if (normalized.includes('WEEKLY')) date.setUTCDate(date.getUTCDate() + 7);
-  else if (normalized.includes('YEARLY')) date.setUTCFullYear(date.getUTCFullYear() + 1);
-  else date.setUTCMonth(date.getUTCMonth() + 1);
-  return dateOnly(date);
-}
 
 export async function POST(request: NextRequest) {
   if (!process.env.CRON_SECRET || request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -37,7 +29,7 @@ export async function POST(request: NextRequest) {
   for (const item of recurringItems || []) {
     const primaryKey = item.due_date ? 'due_date' : item.event_date ? 'event_date' : item.expiry_date ? 'expiry_date' : null;
     if (!primaryKey || !item[primaryKey]) continue;
-    const nextDate = addRecurrence(item[primaryKey], item.recurrence_rule);
+    const nextDate = nextRecurrenceDate(item[primaryKey], item.recurrence_rule);
     const { id, created_at, updated_at, completed_at, archived_at, search_vector, ...copy } = item;
     const { data: duplicate } = await db.from('life_items').select('id').eq('owner_id', item.owner_id).eq('title', item.title).eq(primaryKey, nextDate).maybeSingle();
     if (!duplicate) await db.from('life_items').insert({ ...copy, [primaryKey]: nextDate, status: 'UPCOMING', completed_at: null, archived_at: null });

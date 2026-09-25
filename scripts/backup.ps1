@@ -58,7 +58,8 @@ function Backup-StoragePrefix([string]$Prefix) {
     $entries = @(Invoke-RestMethod -Method Post -Uri "$supabaseUrl/storage/v1/object/list/documents" -Headers $headers -ContentType 'application/json' -Body $body)
     foreach ($entry in $entries) {
       $objectPath = if ($Prefix) { "$Prefix/$($entry.name)" } else { $entry.name }
-      if ($null -eq $entry.id) { Backup-StoragePrefix $objectPath; continue }
+      $isFolder = [string]::IsNullOrWhiteSpace([string]$entry.id) -or $null -eq $entry.metadata
+      if ($isFolder) { Backup-StoragePrefix $objectPath; continue }
       $relativePath = $objectPath.Replace('/', [IO.Path]::DirectorySeparatorChar)
       $destination = [IO.Path]::GetFullPath((Join-Path $storageDirectory $relativePath))
       $safeRoot = [IO.Path]::GetFullPath($storageDirectory) + [IO.Path]::DirectorySeparatorChar

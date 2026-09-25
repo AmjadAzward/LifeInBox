@@ -28,5 +28,5 @@ export function TurnstileWidget({ onToken }: { onToken: (token: string) => void 
   }, [onToken, ready, siteKey]);
 
   if (!siteKey) return null;
-  return <><Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" onLoad={()=>setReady(true)}/><div ref={container} className="flex min-h-[65px] justify-center" aria-label="Security verification"/></>;
+  return <><Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" onLoad={()=>setReady(true)}/><div ref={container} className="flex min-h-[65px] justify-center" role="group" aria-label="Security verification"/></>;
 }

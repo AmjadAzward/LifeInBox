@@ -10,16 +10,21 @@ if (-not $pgRestore) {
   if (Test-Path -LiteralPath $default) { $pgRestore = Get-Item -LiteralPath $default }
   else { throw "Required command 'pg_restore.exe' was not found." }
 }
-if (-not (Get-Command 'rclone' -ErrorAction SilentlyContinue)) { throw "Required command 'rclone' was not found." }
+$rclone = Get-Command 'rclone.exe' -ErrorAction SilentlyContinue
+if (-not $rclone) {
+  $wingetPackages = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'
+  $rclone = Get-ChildItem -LiteralPath $wingetPackages -Filter 'rclone.exe' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+  if (-not $rclone) { throw "Required command 'rclone.exe' was not found." }
+}
 
-$backupNames = @(& rclone lsf $Remote --dirs-only)
+$backupNames = @(& $rclone.FullName lsf $Remote --dirs-only)
 if ($LASTEXITCODE -ne 0 -or $backupNames.Count -eq 0) { throw 'No encrypted remote backups were found.' }
 $latest = ($backupNames | ForEach-Object { $_.TrimEnd('/') } | Where-Object { $_ } | Sort-Object | Select-Object -Last 1)
 $restoreDirectory = Join-Path $testRoot $latest
 New-Item -ItemType Directory -Path $restoreDirectory -Force | Out-Null
 
 Write-Host "Downloading and decrypting backup $latest..."
-& rclone copy "$Remote/$latest" $restoreDirectory --size-only
+& $rclone.FullName copy "$Remote/$latest" $restoreDirectory --size-only
 if ($LASTEXITCODE -ne 0) { throw 'Unable to download the encrypted backup.' }
 
 $manifestPath = Join-Path $restoreDirectory 'manifest.sha256'

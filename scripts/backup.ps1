@@ -32,8 +32,13 @@ $serviceKey = $settings['SUPABASE_SERVICE_ROLE_KEY']
 $databaseUrl = $settings['SUPABASE_DB_URL']
 if (-not $supabaseUrl -or -not $serviceKey -or -not $databaseUrl) { throw 'Supabase URL, service-role key, or SUPABASE_DB_URL is missing from .env.local.' }
 
-Assert-Command 'rclone'
 Assert-Command 'node.exe'
+$rcloneCommand = Get-Command 'rclone.exe' -ErrorAction SilentlyContinue
+if (-not $rcloneCommand) {
+  $wingetPackages = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'
+  $rcloneCommand = Get-ChildItem -LiteralPath $wingetPackages -Filter 'rclone.exe' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+  if (-not $rcloneCommand) { throw "Required command 'rclone.exe' was not found." }
+}
 $pgDumpCommand = Get-Command 'pg_dump.exe' -ErrorAction SilentlyContinue
 if (-not $pgDumpCommand) {
   $defaultPgDump = 'C:\Program Files\PostgreSQL\17\bin\pg_dump.exe'
@@ -66,9 +71,9 @@ Get-ChildItem -LiteralPath $runDirectory -File -Recurse | Where-Object FullName 
 
 $destinationRemote = "$Remote/$stamp"
 Write-Host "Uploading encrypted backup to $destinationRemote..."
-& rclone copy $runDirectory $destinationRemote --size-only --create-empty-src-dirs
+& $rcloneCommand.FullName copy $runDirectory $destinationRemote --size-only --create-empty-src-dirs
 if ($LASTEXITCODE -ne 0) { throw 'Encrypted upload failed; the local backup has been retained.' }
-& rclone check $runDirectory $destinationRemote --one-way --size-only
+& $rcloneCommand.FullName check $runDirectory $destinationRemote --one-way --size-only
 if ($LASTEXITCODE -ne 0) { throw 'Backup verification failed; the local backup has been retained.' }
 Write-Host "Backup uploaded and verified: $destinationRemote"
 if (-not $KeepLocal) {

@@ -19,6 +19,10 @@ export function TurnstileWidget({ onToken }: { onToken: (token: string) => void 
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    if (window.turnstile) setReady(true);
+  }, []);
+
+  useEffect(() => {
     if (!siteKey || !ready || !container.current || !window.turnstile || widgetId.current) return;
     widgetId.current = window.turnstile.render(container.current, {
       sitekey: siteKey,
@@ -31,5 +35,5 @@ export function TurnstileWidget({ onToken }: { onToken: (token: string) => void 
   }, [onToken, ready, siteKey]);
 
   if (!siteKey) return null;
-  return <><Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" onLoad={()=>setReady(true)}/><div ref={container} className="flex min-h-[65px] justify-center" role="group" aria-label="Security verification"/></>;
+  return <><Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" onLoad={()=>setReady(true)} onReady={()=>setReady(true)}/><div ref={container} className="flex min-h-[65px] justify-center" role="group" aria-label="Security verification"/></>;
 }

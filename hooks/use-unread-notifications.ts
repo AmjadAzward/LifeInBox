@@ -42,6 +42,21 @@ export function useUnreadNotifications() {
       window.removeEventListener('focus', refreshNow);
     };
   }, [refresh]);
-  useEffect(()=>{const supabase=createClient();let channel:ReturnType<typeof supabase.channel>|undefined;supabase.auth.getUser().then(({data})=>{if(!data.user)return;channel=supabase.channel(`notifications:${data.user.id}`).on('postgres_changes',{event:'*',schema:'public',table:'notifications',filter:`owner_id=eq.${data.user.id}`},()=>refresh(true)).subscribe();});return()=>{if(channel)supabase.removeChannel(channel);};},[refresh]);
+  useEffect(()=>{
+    const supabase=createClient();
+    let channel:ReturnType<typeof supabase.channel>|undefined;
+    let cancelled=false;
+    supabase.auth.getUser().then(({data})=>{
+      if(cancelled||!data.user)return;
+      channel=supabase
+        .channel(`notifications:${data.user.id}:${crypto.randomUUID()}`)
+        .on('postgres_changes',{event:'*',schema:'public',table:'notifications',filter:`owner_id=eq.${data.user.id}`},()=>refresh(true))
+        .subscribe();
+    });
+    return()=>{
+      cancelled=true;
+      if(channel)void supabase.removeChannel(channel);
+    };
+  },[refresh]);
   return { unreadCount, refresh };
 }

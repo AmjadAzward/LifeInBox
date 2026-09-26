@@ -48,8 +48,16 @@ export default function LoginPage() {
   const handleGoogle = async () => {
     setLoading(true);
     try {
-      const { error } = await createClient().auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback?next=/app` } });
+      const { data, error } = await createClient().auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=/app`,
+          skipBrowserRedirect: true,
+        },
+      });
       if (error) throw error;
+      if (!data.url) throw new Error('Google did not return a sign-in URL.');
+      window.location.assign(data.url);
     } catch (error) { setErrors({ password: error instanceof Error ? error.message : 'Google sign in failed.' }); setLoading(false); }
   };
 
@@ -133,7 +141,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <Button variant="outline" className="w-full" onClick={handleGoogle} disabled={loading || !hasSupabaseConfig}>
+      <Button type="button" variant="outline" className="w-full" onClick={handleGoogle} disabled={loading || !hasSupabaseConfig}>
         <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24">
           <path
             fill="#4285F4"

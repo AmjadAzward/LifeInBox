@@ -10,7 +10,10 @@ declare global {
 }
 
 export function TurnstileWidget({ onToken }: { onToken: (token: string) => void }) {
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const configuredSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const siteKey = process.env.NODE_ENV === 'development'
+    ? '1x00000000000000000000AA'
+    : configuredSiteKey;
   const container = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string>();
   const [ready, setReady] = useState(false);

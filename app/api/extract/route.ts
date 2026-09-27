@@ -6,6 +6,7 @@ import { apiError } from '@/lib/http';
 import { categories } from '@/lib/validation';
 import { rateLimit } from '@/lib/rate-limit';
 import { extractLocalText, fallbackExtraction } from '@/lib/local-ocr';
+import { extractWithOllama } from '@/lib/ollama-extraction';
 
 const requestSchema = z.object({ text: z.string().max(30000).optional(), attachmentId: z.string().uuid().optional() }).refine((v) => v.text || v.attachmentId);
 const extractionSchema = {
@@ -41,7 +42,13 @@ export async function POST(request: NextRequest) {
         ? { type: 'input_file', filename: attachment.file_name, file_data: `data:${attachment.mime_type};base64,${base64}` }
         : { type: 'input_image', image_url: `data:${attachment.mime_type};base64,${base64}`, detail: 'high' });
     }
-    if (!process.env.OPENAI_API_KEY) return NextResponse.json({ data: fallbackExtraction(localText), localOcr: true });
+    if (!process.env.OPENAI_API_KEY) {
+      if(process.env.OLLAMA_MODEL&&localText.trim()){
+        try{return NextResponse.json({data:await extractWithOllama(localText,extractionSchema as unknown as Record<string,unknown>),localAi:true,localOcr:Boolean(input.attachmentId)});}
+        catch(localAiError){return NextResponse.json({data:fallbackExtraction(localText),localOcr:true,warning:localAiError instanceof Error?`Local AI unavailable: ${localAiError.message}`:'Local AI unavailable; OCR fallback was used.'});}
+      }
+      return NextResponse.json({ data: fallbackExtraction(localText), localOcr: true });
+    }
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     try {
       const response = await openai.responses.create({

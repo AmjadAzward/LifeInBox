@@ -46,11 +46,12 @@ export function useUnreadNotifications() {
     const supabase=createClient();
     let channel:ReturnType<typeof supabase.channel>|undefined;
     let cancelled=false;
-    supabase.auth.getUser().then(({data})=>{
-      if(cancelled||!data.user)return;
+    supabase.auth.getSession().then(({data})=>{
+      const user = data.session?.user;
+      if(cancelled||!user)return;
       channel=supabase
-        .channel(`notifications:${data.user.id}:${crypto.randomUUID()}`)
-        .on('postgres_changes',{event:'*',schema:'public',table:'notifications',filter:`owner_id=eq.${data.user.id}`},()=>refresh(true))
+        .channel(`notifications:${user.id}:${crypto.randomUUID()}`)
+        .on('postgres_changes',{event:'*',schema:'public',table:'notifications',filter:`owner_id=eq.${user.id}`},()=>refresh(true))
         .subscribe();
     });
     return()=>{

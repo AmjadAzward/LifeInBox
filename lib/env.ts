@@ -8,7 +8,7 @@ const schema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_EXTRACTION_MODEL: z.string().default('gpt-4o-mini'),
   RESEND_API_KEY: z.string().optional(),
-  REMINDER_FROM_EMAIL: z.string().default('LifeInbox <reminders@example.com>'),
+  REMINDER_FROM_EMAIL: z.string().default('LifeInbox <onboarding@resend.dev>'),
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().default('mailto:support@example.com'),

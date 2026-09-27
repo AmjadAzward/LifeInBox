@@ -9,7 +9,7 @@ export async function extractWithOllama(text:string,schema:Record<string,unknown
       headers:{'content-type':'application/json'},
       signal:controller.signal,
       body:JSON.stringify({
-        model:process.env.OLLAMA_MODEL||'qwen2.5:3b',
+        model:process.env.OLLAMA_MODEL||'qwen2.5:0.5b',
         stream:false,
         format:schema,
         options:{temperature:0},

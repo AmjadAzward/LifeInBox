@@ -1,0 +1,10 @@
+const fs=require('node:fs');
+const file='.env.local';
+const lines=fs.readFileSync(file,'utf8').split(/\r?\n/);
+const sender='LifeInbox <onboarding@resend.dev>';
+const index=lines.findIndex((line)=>line.startsWith('REMINDER_FROM_EMAIL='));
+if(index>=0)lines[index]='REMINDER_FROM_EMAIL='+sender;
+else lines.push('REMINDER_FROM_EMAIL='+sender);
+if(!lines.some((line)=>line.startsWith('RESEND_API_KEY=')))lines.push('RESEND_API_KEY=');
+fs.writeFileSync(file,lines.join('\n'),{encoding:'utf8',mode:0o600});
+console.log('Configured Resend free testing sender. Add the private RESEND_API_KEY to .env.local.');

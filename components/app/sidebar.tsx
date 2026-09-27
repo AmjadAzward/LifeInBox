@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   Home,
   ListChecks,
@@ -30,12 +30,10 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const activePath = pendingHref || pathname;
   const { unreadCount } = useUnreadNotifications();
   useEffect(() => { setPendingHref(null); }, [pathname]);
-  useEffect(() => { [...navItems.map((item) => item.href), '/app/notifications', '/app/profile'].forEach((href) => router.prefetch(href)); }, [router]);
 
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col border-r border-border bg-card z-30">

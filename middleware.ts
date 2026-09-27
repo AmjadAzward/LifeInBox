@@ -22,11 +22,12 @@ export async function middleware(request: NextRequest) {
       },
     },
   });
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getClaims();
+  const authenticated = !error && Boolean(data?.claims.sub);
   const protectedRoute = request.nextUrl.pathname.startsWith('/app');
   const authRoute = ['/login', '/register', '/forgot-password'].includes(request.nextUrl.pathname);
-  if (protectedRoute && !user) return NextResponse.redirect(new URL('/login', request.url));
-  if (authRoute && user) return NextResponse.redirect(new URL('/app', request.url));
+  if (protectedRoute && !authenticated) return NextResponse.redirect(new URL('/login', request.url));
+  if (authRoute && authenticated) return NextResponse.redirect(new URL('/app', request.url));
   return response;
 }
 

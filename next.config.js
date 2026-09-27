@@ -7,15 +7,13 @@ const nextConfig = {
   },
   images: { unoptimized: true },
 };
-
-module.exports = nextConfig;
-
-
-// Injected content via Sentry wizard below
-
-const { withSentryConfig } = require("@sentry/nextjs/config");
-
-module.exports = withSentryConfig(module.exports, {
+// Sentry is disabled locally, so avoid loading its webpack wrapper during
+// development. This substantially reduces cold compilation time.
+if (process.env.NODE_ENV !== 'production') {
+  module.exports = nextConfig;
+} else {
+  const { withSentryConfig } = require('@sentry/nextjs/config');
+  module.exports = withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
@@ -50,4 +48,5 @@ module.exports = withSentryConfig(module.exports, {
       removeDebugLogging: true,
     },
   },
-});
+  });
+}

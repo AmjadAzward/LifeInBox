@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Home, ListChecks, Plus, Calendar, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -16,11 +16,9 @@ const items = [
 
 export function MobileNav() {
   const pathname = usePathname();
-  const router = useRouter();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const activePath = pendingHref || pathname;
   useEffect(() => { setPendingHref(null); }, [pathname]);
-  useEffect(() => { items.forEach((item) => router.prefetch(item.href)); }, [router]);
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-card border-t border-border">

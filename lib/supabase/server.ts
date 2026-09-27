@@ -32,7 +32,12 @@ export function createAdminSupabase() {
 
 export async function requireUser() {
   const supabase = createServerSupabase();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) throw new Error('UNAUTHORIZED');
+  const { data, error } = await supabase.auth.getClaims();
+  const id = data?.claims.sub;
+  if (error || !id) throw new Error('UNAUTHORIZED');
+  const user = {
+    id,
+    email: typeof data.claims.email === 'string' ? data.claims.email : undefined,
+  };
   return { supabase, user };
 }
